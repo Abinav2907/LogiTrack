@@ -25,7 +25,7 @@ export default function RevenueChart() {
     <div className="bg-[#111111] border border-[#222222] rounded-2xl p-6">
       <h2 className="text-2xl font-bold text-white mb-6">Revenue Overview</h2>
 
-      <div className="h-87.5">
+      <div className="h-[350px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
             <CartesianGrid stroke="#222222" strokeDasharray="3 3" />

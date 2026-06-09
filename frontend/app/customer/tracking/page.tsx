@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -174,9 +174,10 @@ export default function TrackingPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Order Tracking</h1>
+    <Suspense fallback={<div className="space-y-6" />}>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Order Tracking</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Track your orders in real-time with live delivery updates
         </p>
@@ -436,5 +437,6 @@ export default function TrackingPage() {
         </div>
       </div>
     </div>
+    </Suspense>
   );
 }

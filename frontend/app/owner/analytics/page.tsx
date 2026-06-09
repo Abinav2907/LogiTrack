@@ -223,7 +223,7 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          <div className="mt-8 h-95">
+          <div className="mt-8 h-[380px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={revenueData}>
                 <XAxis
@@ -379,7 +379,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        <div className="mt-8 h-90">
+        <div className="mt-8 h-[360px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={deliveryData}
