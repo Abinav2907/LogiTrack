@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-import Navbar from "@/components/common/Navbar";
-import Sidebar from "@/components/common/Sidebar";
 import type { DeliveryRecord } from "@/components/delivery/deliveryData";
 import { fetchDashboard, saveLocationUpdate } from "@/lib/api";
 
@@ -212,175 +210,167 @@ export default function TrackingPage() {
     : "https://www.openstreetmap.org/";
 
   return (
-    <div className="flex flex-col lg:flex-row bg-[#0B0B0B] min-h-screen">
-      <Sidebar />
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.3em] text-[#A1A1AA]">
+            GPS / live location
+          </p>
+          <h1 className="text-3xl font-bold text-white mt-2">
+            Live location update UI
+          </h1>
+          <p className="text-[#D5D5D5] mt-3 max-w-2xl">
+            Convert coordinates into location details instantly, sync the
+            customer route, and keep all delivery updates aligned with the live
+            operational view.
+          </p>
+        </div>
 
-      <div className="flex-1">
-        <Navbar />
+        <div className="rounded-2xl border border-[#27272A] bg-[#1A1A1A] px-4 py-3">
+          <p className="text-sm text-[#A1A1AA]">Active route</p>
+          <p className="text-lg font-semibold text-white mt-1">
+            {activeRoute?.customer || "No active route available"}
+          </p>
+        </div>
+      </div>
 
-        <main className="p-4 md:p-6">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.3em] text-[#A1A1AA]">
-                GPS / live location
-              </p>
-              <h1 className="text-3xl font-bold text-white mt-2">
-                Live location update UI
-              </h1>
-              <p className="text-[#D5D5D5] mt-3 max-w-2xl">
-                Convert coordinates into location details instantly, sync the
-                customer route, and keep all delivery updates aligned with the
-                live operational view.
-              </p>
+      <div className="bg-[#1A1A1A] border border-[#27272A] rounded-2xl p-5 mt-8">
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-2xl bg-[#111111] border border-[#27272A] p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-[#A1A1AA]">Map preview</p>
+                <h2 className="text-xl font-semibold text-white mt-1">
+                  {locationDetails
+                    ? "Resolved location"
+                    : "Enter coordinates to preview"}
+                </h2>
+              </div>
+
+              <span className="text-sm text-[#A1A1AA]">
+                {locationDetails
+                  ? `Source: ${locationDetails.source}`
+                  : "Awaiting input"}
+              </span>
             </div>
 
-            <div className="rounded-2xl border border-[#27272A] bg-[#1A1A1A] px-4 py-3">
-              <p className="text-sm text-[#A1A1AA]">Active route</p>
-              <p className="text-lg font-semibold text-white mt-1">
-                {activeRoute?.customer || "No active route available"}
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-[#1A1A1A] border border-[#27272A] rounded-2xl p-5 mt-8">
-            <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-              <div className="rounded-2xl bg-[#111111] border border-[#27272A] p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm text-[#A1A1AA]">Map preview</p>
-                    <h2 className="text-xl font-semibold text-white mt-1">
-                      {locationDetails
-                        ? "Resolved location"
-                        : "Enter coordinates to preview"}
-                    </h2>
-                  </div>
-
-                  <span className="text-sm text-[#A1A1AA]">
-                    {locationDetails
-                      ? `Source: ${locationDetails.source}`
-                      : "Awaiting input"}
-                  </span>
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-[#27272A] bg-[#0B0B0B] p-4 min-h-[400px] flex flex-col">
-                  {showMap && locationDetails ? (
-                    <>
-                      <div className="mb-4">
-                        <div>
-                          <p className="text-sm text-[#A1A1AA]">Place</p>
-                          <p className="text-white text-lg font-semibold mt-2">
-                            {locationDetails.displayName}
-                          </p>
-                          <p className="text-[#D5D5D5] mt-1">
-                            {locationDetails.formattedAddress}
-                          </p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3 text-sm mt-3">
-                          <div className="rounded-xl border border-[#27272A] bg-[#111111] p-3">
-                            <p className="text-[#A1A1AA]">Latitude</p>
-                            <p className="text-white font-semibold mt-2">
-                              {locationDetails.latitude.toFixed(6)}
-                            </p>
-                          </div>
-
-                          <div className="rounded-xl border border-[#27272A] bg-[#111111] p-3">
-                            <p className="text-[#A1A1AA]">Longitude</p>
-                            <p className="text-white font-semibold mt-2">
-                              {locationDetails.longitude.toFixed(6)}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex-1 rounded-xl border border-[#27272A] overflow-hidden">
-                        <iframe
-                          width="100%"
-                          height="100%"
-                          frameBorder="0"
-                          src={`https://www.openstreetmap.org/export/embed.html?bbox=${locationDetails.longitude - 0.01},${locationDetails.latitude - 0.01},${locationDetails.longitude + 0.01},${locationDetails.latitude + 0.01}&layer=mapnik&marker=${locationDetails.latitude},${locationDetails.longitude}`}
-                          style={{ minHeight: "300px" }}
-                          title="Location Map"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-center px-4">
-                      <p className="text-[#A1A1AA] text-lg">
-                        Coordinates will show the map and location details here
-                        once you resolve them.
+            <div className="mt-4 rounded-2xl border border-[#27272A] bg-[#0B0B0B] p-4 min-h-100 flex flex-col">
+              {showMap && locationDetails ? (
+                <>
+                  <div className="mb-4">
+                    <div>
+                      <p className="text-sm text-[#A1A1AA]">Place</p>
+                      <p className="text-white text-lg font-semibold mt-2">
+                        {locationDetails.displayName}
+                      </p>
+                      <p className="text-[#D5D5D5] mt-1">
+                        {locationDetails.formattedAddress}
                       </p>
                     </div>
-                  )}
-                </div>
-              </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm text-[#A1A1AA]">Latitude</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 13.0827"
-                    value={latitude}
-                    onChange={(event) => setLatitude(event.target.value)}
-                    className="mt-2 bg-[#111111] border border-[#27272A] rounded-2xl p-3 text-white w-full outline-none"
-                  />
-                </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm mt-3">
+                      <div className="rounded-xl border border-[#27272A] bg-[#111111] p-3">
+                        <p className="text-[#A1A1AA]">Latitude</p>
+                        <p className="text-white font-semibold mt-2">
+                          {locationDetails.latitude.toFixed(6)}
+                        </p>
+                      </div>
 
-                <div>
-                  <label className="text-sm text-[#A1A1AA]">Longitude</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 80.2707"
-                    value={longitude}
-                    onChange={(event) => setLongitude(event.target.value)}
-                    className="mt-2 bg-[#111111] border border-[#27272A] rounded-2xl p-3 text-white w-full outline-none"
-                  />
-                </div>
+                      <div className="rounded-xl border border-[#27272A] bg-[#111111] p-3">
+                        <p className="text-[#A1A1AA]">Longitude</p>
+                        <p className="text-white font-semibold mt-2">
+                          {locationDetails.longitude.toFixed(6)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-                <div className="flex flex-wrap gap-3 pt-2">
-                  <button
-                    onClick={() => void handleUpdateLocation()}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Resolving..." : "Update location"}
-                  </button>
-
-                  <button
-                    onClick={handleUseCurrentLocation}
-                    disabled={isLoading}
-                    className="bg-transparent border border-[#27272A] hover:bg-[#111111]"
-                  >
-                    Use current location
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setLatitude("");
-                      setLongitude("");
-                      setLocationDetails(null);
-                      setShowMap(false);
-                    }}
-                    className="bg-transparent border border-[#27272A] hover:bg-[#111111]"
-                  >
-                    Clear
-                  </button>
-                </div>
-
-                <div className="bg-[#111111] border border-[#27272A] rounded-2xl p-4">
-                  <p className="text-sm text-[#A1A1AA]">Live status</p>
-                  <p className="text-white font-semibold mt-2">
-                    {locationDetails?.formattedAddress || "Awaiting GPS input"}
-                  </p>
-                  <p className="text-sm text-[#D5D5D5] mt-3">
-                    Last resolved:{" "}
-                    {locationDetails?.timestamp || "No location resolved yet"}
+                  <div className="flex-1 rounded-xl border border-[#27272A] overflow-hidden">
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      frameBorder="0"
+                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${locationDetails.longitude - 0.01},${locationDetails.latitude - 0.01},${locationDetails.longitude + 0.01},${locationDetails.latitude + 0.01}&layer=mapnik&marker=${locationDetails.latitude},${locationDetails.longitude}`}
+                      className="min-h-75"
+                      title="Location Map"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="flex h-full items-center justify-center text-center px-4">
+                  <p className="text-[#A1A1AA] text-lg">
+                    Coordinates will show the map and location details here once
+                    you resolve them.
                   </p>
                 </div>
-              </div>
+              )}
             </div>
           </div>
-        </main>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-[#A1A1AA]">Latitude</label>
+              <input
+                type="text"
+                placeholder="e.g. 13.0827"
+                value={latitude}
+                onChange={(event) => setLatitude(event.target.value)}
+                className="mt-2 bg-[#111111] border border-[#27272A] rounded-2xl p-3 text-white w-full outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-[#A1A1AA]">Longitude</label>
+              <input
+                type="text"
+                placeholder="e.g. 80.2707"
+                value={longitude}
+                onChange={(event) => setLongitude(event.target.value)}
+                className="mt-2 bg-[#111111] border border-[#27272A] rounded-2xl p-3 text-white w-full outline-none"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-3 pt-2">
+              <button
+                onClick={() => void handleUpdateLocation()}
+                disabled={isLoading}
+              >
+                {isLoading ? "Resolving..." : "Update location"}
+              </button>
+
+              <button
+                onClick={handleUseCurrentLocation}
+                disabled={isLoading}
+                className="bg-transparent border border-[#27272A] hover:bg-[#111111]"
+              >
+                Use current location
+              </button>
+
+              <button
+                onClick={() => {
+                  setLatitude("");
+                  setLongitude("");
+                  setLocationDetails(null);
+                  setShowMap(false);
+                }}
+                className="bg-transparent border border-[#27272A] hover:bg-[#111111]"
+              >
+                Clear
+              </button>
+            </div>
+
+            <div className="bg-[#111111] border border-[#27272A] rounded-2xl p-4">
+              <p className="text-sm text-[#A1A1AA]">Live status</p>
+              <p className="text-white font-semibold mt-2">
+                {locationDetails?.formattedAddress || "Awaiting GPS input"}
+              </p>
+              <p className="text-sm text-[#D5D5D5] mt-3">
+                Last resolved:{" "}
+                {locationDetails?.timestamp || "No location resolved yet"}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

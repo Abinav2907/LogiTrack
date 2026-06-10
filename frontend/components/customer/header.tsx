@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useEffect, useState } from "react";
 import { Bell, Search, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -15,48 +14,63 @@ import { useLogout } from "@/lib/logout";
 
 export function CustomerHeader() {
   const { logout } = useLogout();
-
   const [userName, setUserName] = useState("User");
 
   useEffect(() => {
     const name = localStorage.getItem("userName");
-
     if (name) {
       setUserName(name);
     }
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background px-6">
+    <div className="w-full h-20 bg-[#111111] border-b border-neutral-900 px-8 flex items-center justify-between">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">
-          Customer Dashboard
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Manage orders, deliveries and premium products
+        <h1 className="text-2xl font-bold text-white">Customer Dashboard</h1>
+        <p className="text-neutral-500 text-sm mt-1">
+          Welcome back, {userName}
         </p>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search products..." className="w-64 pl-9" />
+      <div className="flex items-center gap-5">
+        <div className="flex items-center gap-3 bg-[#0B0B0B] border border-neutral-800 px-4 py-3 rounded-2xl w-[320px]">
+          <button
+            type="button"
+            className="text-neutral-500 hover:text-white transition-colors"
+            aria-label="Search products"
+          >
+            <Search size={18} aria-hidden="true" />
+          </button>
+          <Input
+            placeholder="Search products..."
+            className="bg-transparent outline-none text-white placeholder:text-neutral-500 w-full"
+          />
         </div>
 
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative w-12 h-12 rounded-2xl bg-[#0B0B0B] border border-neutral-800 flex items-center justify-center text-neutral-400 hover:bg-[#7F1D1D] hover:text-white transition-all"
+        >
+          <Bell size={20} aria-hidden="true" />
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-medium text-white">
             3
           </span>
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                <User className="h-4 w-4" />
+            <Button
+              variant="ghost"
+              className="flex items-center gap-3 bg-[#0B0B0B] border border-neutral-800 px-4 py-2 rounded-2xl hover:bg-[#1A1A1A]"
+            >
+              <div className="w-10 h-10 rounded-full bg-[#7F1D1D] flex items-center justify-center text-white font-bold">
+                {userName[0]?.toUpperCase() || "U"}
               </div>
-            <span className="hidden md:inline-block">{userName}</span>
+              <div>
+                <h3 className="text-white font-medium">{userName}</h3>
+                <p className="text-neutral-500 text-sm">Customer</p>
+              </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -66,6 +80,6 @@ export function CustomerHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </header>
+    </div>
   );
 }

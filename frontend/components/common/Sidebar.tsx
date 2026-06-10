@@ -46,61 +46,41 @@ const Sidebar = () => {
   ];
 
   return (
-    <aside className="bg-[#111111] border-b border-[#27272A] lg:border-b-0 lg:border-r lg:min-h-screen lg:w-64">
-      <div className="p-4 md:p-5">
-        <div className="hidden lg:block">
-          <p className="text-[11px] uppercase tracking-[0.25em] text-[#A1A1AA]">
-            Navigation
-          </p>
-          <h2 className="text-2xl font-bold text-white mt-2">LogiTrack</h2>
-        </div>
+    <div className="w-72 min-h-screen bg-black border-r border-[#1f1f1f] p-6">
+      <h1 className="text-4xl font-bold text-white mb-2">
+        Logi<span className="text-red-600">Track</span>
+      </h1>
 
-        <div className="flex flex-row gap-2 overflow-x-auto lg:flex-col lg:gap-3 lg:mt-6">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = pathname === item.href;
+      <p className="text-gray-500 mb-10">Delivery Agent</p>
 
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`
-                  flex
-                  items-center
-                  gap-3
-                  px-4
-                  py-3
-                  rounded-2xl
-                  transition-all
-                  duration-200
-                  whitespace-nowrap
-                  ${
-                    active
-                      ? "bg-[#7F1D1D] text-white shadow-lg shadow-[#7F1D1D]/20"
-                      : "text-[#A1A1AA] hover:bg-[#1A1A1A] hover:text-white"
-                  }
-                `}
-              >
-                <Icon size={18} />
-                <span className="text-sm font-medium">{item.name}</span>
-              </Link>
-            );
-          })}
-        </div>
+      <div className="space-y-3">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const active = pathname === item.href;
 
-        <div className="mt-4 lg:mt-6 pt-4 border-t border-[#27272A]">
-          <button
-            onClick={logout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white transition-all duration-200 font-medium"
-            title="Logout"
-            aria-label="Logout"
-          >
-            <LogOut size={18} />
-            <span className="text-sm">Logout</span>
-          </button>
-        </div>
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${
+                active
+                  ? "bg-red-600 text-white"
+                  : "text-gray-400 hover:bg-[#111111] hover:text-white"
+              }`}
+            >
+              <Icon size={22} />
+              <span className="text-lg">{item.name}</span>
+            </Link>
+          );
+        })}
       </div>
-    </aside>
+      <button
+        onClick={logout}
+        className="w-full mt-8 bg-red-600 hover:bg-red-700 text-white py-3 rounded-2xl transition-all"
+      >
+        Logout
+      </button>
+    </div>
   );
 };
 

@@ -5,26 +5,52 @@ interface Props {
   trend?: string;
 }
 
-const StatsCard = ({
-  title,
-  value,
-  description,
-  trend,
-}: Props) => {
+const StatsCard = ({ title, value, description, trend }: Props) => {
   return (
-    <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#27272A] hover:border-[#7F1D1D]/60 transition-all duration-200">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-[#A1A1AA]">{title}</p>
+    <div
+      className="
+        bg-[#111111]
+        border
+        border-neutral-900
+        rounded-3xl
+        p-6
+        hover:border-[#7F1D1D]
+        transition-all
+        duration-300
+      "
+    >
+      {/* TOP */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-neutral-500 text-sm">{title}</p>
+          <h2 className="text-3xl font-bold text-white mt-3">{value}</h2>
+        </div>
 
-        {trend ? (
-          <span className="text-xs text-[#F5D0D0]">{trend}</span>
-        ) : null}
+        <div
+          className="
+            w-14
+            h-14
+            rounded-2xl
+            bg-[#7F1D1D]/20
+            border
+            border-[#7F1D1D]
+            flex
+            items-center
+            justify-center
+            text-[#DC2626]
+          "
+        >
+          {trend ? (
+            <span className="text-sm font-semibold">{trend}</span>
+          ) : null}
+        </div>
       </div>
 
-      <h2 className="text-3xl font-bold mt-3 text-white">{value}</h2>
-
+      {/* BOTTOM */}
       {description ? (
-        <p className="text-sm text-[#D5D5D5] mt-2">{description}</p>
+        <div className="mt-4">
+          <p className="text-neutral-400 text-sm">{description}</p>
+        </div>
       ) : null}
     </div>
   );

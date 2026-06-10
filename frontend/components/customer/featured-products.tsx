@@ -57,7 +57,7 @@ export function FeaturedProducts() {
         </h2>
         <Link
           href="/customer/products"
-          className="text-sm font-medium text-primary hover:underline"
+          className="text-sm font-medium text-[#F87171] hover:underline"
         >
           View All
         </Link>
@@ -66,10 +66,10 @@ export function FeaturedProducts() {
         {featuredProducts.map((product) => (
           <Card
             key={product.id}
-            className="group overflow-hidden border-none shadow-sm"
+            className="group overflow-hidden border border-[#27272A] bg-[#111111] shadow-sm"
           >
-            <CardContent className="p-0">
-              <div className="relative aspect-square overflow-hidden bg-zinc-900">
+            <CardContent className="p-0 rounded-3xl">
+              <div className="relative aspect-square overflow-hidden bg-[#0B0B0B]">
                 <Image
                   src={product.image}
                   alt={product.name}
@@ -78,14 +78,12 @@ export function FeaturedProducts() {
                 />
               </div>
               <div className="p-3">
-                <p className="text-xs text-muted-foreground">
-                  {product.category}
-                </p>
-                <h3 className="mt-1 font-medium text-foreground">
+                <p className="text-xs text-[#A1A1AA]">{product.category}</p>
+                <h3 className="mt-1 font-semibold text-white">
                   {product.name}
                 </h3>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-lg font-bold text-foreground">
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <span className="text-lg font-bold text-white">
                     ₹{product.price.toLocaleString()}
                   </span>
                   <Button size="sm" className="h-8 text-xs">

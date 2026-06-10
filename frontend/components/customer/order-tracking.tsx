@@ -57,7 +57,7 @@ export function OrderTracking() {
   };
 
   return (
-    <Card className="border-none shadow-sm">
+    <Card className="border border-[#27272A] bg-[#111111] shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
           <p className="text-sm text-muted-foreground">Live Tracking</p>
