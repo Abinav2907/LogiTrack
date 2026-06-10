@@ -39,7 +39,13 @@ export default function ProductsPage() {
       setError(null);
 
       try {
-        const res = await fetch("http://localhost:5000/api/products");
+     const token = localStorage.getItem("token");
+
+const res = await fetch("http://localhost:5000/api/products", {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         if (!json || json.success !== true) {
@@ -101,7 +107,14 @@ export default function ProductsPage() {
     setItems(updated);
 
     try {
-      await fetch(`http://localhost:5000/api/products/${id}`, { method: "DELETE" });
+      const token = localStorage.getItem("token");
+
+await fetch(`http://localhost:5000/api/products/${id}`, {
+  method: "DELETE",
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
     } catch (err: any) {
       setError(err?.message ?? "Failed to delete product");
       // keep optimistic change; if you prefer to revert on failure, implement revert logic here

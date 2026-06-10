@@ -77,7 +77,7 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     // FIND USER
     const user = await User.findOne({ email });
@@ -87,6 +87,12 @@ const login = async (req, res) => {
         message: "Invalid Credentials",
       });
     }
+
+    if (user.role !== role) {
+      return res.status(400).json({
+      message: "Invalid role selected",
+      });
+}
 
     // CHECK PASSWORD
     const isMatch = await bcrypt.compare(password, user.password);

@@ -43,25 +43,37 @@ function getApiBaseUrl() {
 }
 
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("token")
+      : null;
+
+  console.log("TOKEN:", token);
+
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
+    ...init,
+
     headers: {
       "Content-Type": "application/json",
+      Authorization: token ? `Bearer ${token}` : "",
       ...(init?.headers || {}),
     },
-    ...init,
   });
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null);
 
     throw new Error(
-      errorBody?.error || `Request failed with status ${response.status}`,
+      errorBody?.message ||
+        errorBody?.error ||
+        `Request failed with status ${response.status}`
     );
   }
 
   const json = await response.json();
+
   if (json && typeof json === "object" && "data" in json) {
-    return (json as any).data as T;
+    return json.data as T;
   }
 
   return json as T;
@@ -76,7 +88,7 @@ export async function fetchOrders(): Promise<any[]> {
 }
 
 export async function fetchProducts(): Promise<any[]> {
-  return apiRequest<any[]>("/api/products");
+  return apiRequest<any[]>("/api/customer/products");
 }
 
 // Customer-specific endpoints (public-facing)

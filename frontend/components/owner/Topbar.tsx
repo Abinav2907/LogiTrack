@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, Search, Crown } from "lucide-react";
+import { JSX } from "react/jsx-runtime";
 
 const plans = [
   { name: "Starter", price: "$29/mo", details: "Up to 5 users" },
@@ -19,6 +20,14 @@ export default function Topbar(): JSX.Element {
   const [search, setSearch] = useState("");
   const [isPlanOpen, setIsPlanOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [userName, setUserName] = useState("User");
+
+  useEffect(() => {
+    const name = localStorage.getItem("userName");
+    if (name) {
+      setUserName(name);
+    }
+  }, []);
 
   function dispatchSearch(query: string) {
     const event = new CustomEvent("global-search", {
@@ -31,7 +40,7 @@ export default function Topbar(): JSX.Element {
     <div className="w-full h-20 bg-[#111111] border-b border-neutral-900 px-8 flex items-center justify-between">
       <div>
         <h1 className="text-2xl font-bold text-white">Owner Dashboard</h1>
-        <p className="text-neutral-500 text-sm mt-1">Welcome back, Admin</p>
+        <p className="text-neutral-500 text-sm mt-1">Welcome back, {userName}</p>
       </div>
 
       <div className="flex items-center gap-5">
@@ -143,7 +152,7 @@ export default function Topbar(): JSX.Element {
             A
           </div>
           <div>
-            <h3 className="text-white font-medium">Abinav</h3>
+            <h3 className="text-white font-medium">{userName}</h3>
             <p className="text-neutral-500 text-sm">Business Owner</p>
           </div>
         </div>

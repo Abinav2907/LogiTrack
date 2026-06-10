@@ -23,7 +23,13 @@ export default function EditProductPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`http://localhost:5000/api/products/${id}`);
+        const token = localStorage.getItem("token");
+
+const res = await fetch(`http://localhost:5000/api/products/${id}`, {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         if (!json?.success) throw new Error(json?.message ?? "Failed to load");
@@ -63,11 +69,16 @@ export default function EditProductPage() {
     };
 
     try {
-      const res = await fetch(`http://localhost:5000/api/products/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const token = localStorage.getItem("token");
+
+const res = await fetch(`http://localhost:5000/api/products/${id}`, {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  },
+  body: JSON.stringify(payload),
+});
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (!json?.success) throw new Error(json?.message ?? "Update failed");

@@ -42,9 +42,12 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
+      console.log("LOGIN RESPONSE:", data);
+      console.log(data);
 
       if (res.ok) {
         localStorage.setItem("token", data.token);
+        localStorage.setItem("userName", data.user.fullName);
 
         if (selectedRole === "Business Owner") {
           router.push("/owner");

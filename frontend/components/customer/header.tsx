@@ -1,5 +1,7 @@
 "use client";
 
+
+import { useEffect, useState } from "react";
 import { Bell, Search, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,17 @@ import { useLogout } from "@/lib/logout";
 
 export function CustomerHeader() {
   const { logout } = useLogout();
+
+  const [userName, setUserName] = useState("User");
+
+  useEffect(() => {
+    const name = localStorage.getItem("userName");
+
+    if (name) {
+      setUserName(name);
+    }
+  }, []);
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background px-6">
       <div>
@@ -43,7 +56,7 @@ export function CustomerHeader() {
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                 <User className="h-4 w-4" />
               </div>
-              <span className="hidden md:inline-block">Abinav</span>
+            <span className="hidden md:inline-block">{userName}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

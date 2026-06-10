@@ -9,7 +9,7 @@ exports.createProduct = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Name and price are required' });
     }
 
-    const product = new Product({ name, description, price, images, category, sku, tags, stock, minStock });
+    const product = new Product({name,description,price,images,category,sku,tags,stock,minStock,ownerId:req.user.id});
     await product.save();
 
     res.status(201).json({ success: true, data: product });
@@ -30,7 +30,7 @@ exports.getProducts = async (req, res, next) => {
     if (maxPrice) filter.price = { ...(filter.price || {}), $lte: Number(maxPrice) };
     if (inStock === 'true') filter.stock = { $gt: 0 };
 
-    const products = await Product.find(filter).sort({ createdAt: -1 });
+    const products = await Product.find({...filter,ownerId: req.user.id,isActive: true,}).sort({ createdAt: -1 });
     res.json({ success: true, count: products.length, data: products });
   } catch (err) {
     next(err);

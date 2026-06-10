@@ -15,7 +15,7 @@ const connectDB = async () => {
         "MongoDB connection string is missing in environment variables",
       );
     }
-
+    console.log("Mongo URI:", mongoURI);
     console.log("Connecting to MongoDB...");
 
     await mongoose.connect(mongoURI, {
@@ -26,7 +26,8 @@ const connectDB = async () => {
 
     return mongoose.connection;
   } catch (error) {
-    console.error("MongoDB connection failed:", error.message);
+    console.error("MongoDB connection failed:");
+    console.error(error);
     process.exit(1);
   }
 };

@@ -1,5 +1,5 @@
 "use client"
-
+import { useLogout } from "@/lib/logout"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -22,6 +22,7 @@ const navItems = [
 
 export function CustomerSidebar() {
   const pathname = usePathname()
+  const { logout } = useLogout()
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-56 flex-col bg-sidebar text-sidebar-foreground">
@@ -53,11 +54,18 @@ export function CustomerSidebar() {
         })}
       </nav>
 
-      <div className="border-t border-sidebar-border p-4">
-        <p className="text-xs text-sidebar-foreground/50">
-          LogiTrack v1.0
-        </p>
-      </div>
+      <div className="border-t border-sidebar-border p-4 space-y-3">
+  <button
+    onClick={logout}
+    className="w-full rounded-xl bg-red-600 py-3 text-white font-medium hover:bg-red-700 transition"
+  >
+    Logout
+  </button>
+
+  <p className="text-xs text-sidebar-foreground/50">
+    LogiTrack v1.0
+  </p>
+</div>
     </aside>
   )
 }
