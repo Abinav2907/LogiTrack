@@ -44,9 +44,7 @@ function getApiBaseUrl() {
 
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const token =
-    typeof window !== "undefined"
-      ? localStorage.getItem("token")
-      : null;
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   console.log("TOKEN:", token);
 
@@ -66,7 +64,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(
       errorBody?.message ||
         errorBody?.error ||
-        `Request failed with status ${response.status}`
+        `Request failed with status ${response.status}`,
     );
   }
 
@@ -84,7 +82,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 ========================= */
 
 export async function fetchOrders(): Promise<any[]> {
-  return apiRequest<any[]>('/api/customer/orders');
+  return apiRequest<any[]>("/api/customer/orders");
 }
 
 export async function fetchProducts(): Promise<any[]> {
@@ -141,7 +139,10 @@ export async function createOwnerProduct(payload: unknown): Promise<any> {
   });
 }
 
-export async function updateOwnerProduct(id: string, payload: unknown): Promise<any> {
+export async function updateOwnerProduct(
+  id: string,
+  payload: unknown,
+): Promise<any> {
   return apiRequest<any>(`/api/products/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload),
@@ -156,6 +157,10 @@ export async function deleteOwnerProduct(id: string): Promise<any> {
 
 export async function fetchOwnerInventory(): Promise<any> {
   return apiRequest<any>("/api/inventory");
+}
+
+export async function fetchOwnerInventoryHistory(): Promise<any> {
+  return apiRequest<any>("/api/inventory/history");
 }
 
 export async function updateOwnerStock(

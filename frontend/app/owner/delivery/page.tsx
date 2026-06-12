@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import DeliveryMap from "@/components/owner/DeliveryMap";
 import AgentCard from "@/components/owner/AgentCard";
 import DeliveryTable from "@/components/owner/DeliveryTable";
@@ -59,7 +58,6 @@ interface ApiResponse {
 }
 
 export default function DeliveryPage() {
-  const router = useRouter();
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [deliveryAgents, setDeliveryAgents] = useState<DeliveryAgent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -116,10 +114,6 @@ export default function DeliveryPage() {
     deliveries.length > 0
       ? Math.round((deliveredCount / deliveries.length) * 100)
       : 0;
-
-  function handleAddAgent() {
-    router.push("/owner/delivery/add");
-  }
 
   return (
     <div className="space-y-8">
@@ -199,14 +193,6 @@ export default function DeliveryPage() {
             <h2 className="text-3xl font-bold text-white">Delivery Agents</h2>
             <p className="text-gray-400 mt-2">Monitor active field agents</p>
           </div>
-
-          <button
-            type="button"
-            onClick={handleAddAgent}
-            className="bg-[#7F1D1D] hover:bg-[#991B1B] transition-all duration-300 px-6 py-3 rounded-2xl text-white font-semibold"
-          >
-            Add Agent
-          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -228,7 +214,8 @@ export default function DeliveryPage() {
             })
           ) : (
             <div className="col-span-full rounded-3xl border border-[#1F1F1F] p-8 text-gray-400">
-              No delivery agents found. Click Add Agent to create one.
+              No delivery agents found. Register delivery users to see them
+              here.
             </div>
           )}
         </div>

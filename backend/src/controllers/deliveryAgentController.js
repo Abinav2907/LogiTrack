@@ -1,9 +1,22 @@
 const DeliveryAgent = require("../models/DeliveryAgent");
+const User = require("../models/User");
 
 const getAllDeliveryAgents = async (req, res, next) => {
   try {
-    const agents = await DeliveryAgent.find().sort({ createdAt: -1 }).lean();
-    res.json({ success: true, count: agents.length, data: agents });
+    const userAgents = await User.find({ role: "Delivery Agent" }).lean();
+    const formattedUserAgents = userAgents.map((user) => ({
+      _id: user._id,
+      name: user.fullName,
+      contact: user.email || user.phone || "",
+      isAvailable: true,
+      vehicle: "",
+    }));
+
+    res.json({
+      success: true,
+      count: formattedUserAgents.length,
+      data: formattedUserAgents,
+    });
   } catch (error) {
     next(error);
   }

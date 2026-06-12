@@ -9,7 +9,7 @@ import {
   RefreshCcw,
   Search,
 } from "lucide-react";
-import { fetchOwnerInventory } from "@/lib/api";
+import { fetchOwnerInventory, fetchOwnerInventoryHistory } from "@/lib/api";
 
 interface InventoryProduct {
   _id: string;
@@ -27,28 +27,22 @@ interface InventoryApiResponse {
   data: InventoryProduct[];
 }
 
-const history = [
-  {
-    id: 1,
-    action: "Restocked Packaging Box",
-    time: "2 hours ago",
-  },
-  {
-    id: 2,
-    action: "Scanner quantity updated",
-    time: "5 hours ago",
-  },
-  {
-    id: 3,
-    action: "Low stock alert triggered",
-    time: "Yesterday",
-  },
-];
+interface InventoryHistoryEntry {
+  _id: string;
+  productName: string;
+  action: string;
+  quantity: number;
+  details: string;
+  createdAt: string;
+}
 
 export default function InventoryPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [inventory, setInventory] = useState<InventoryProduct[]>([]);
+  const [historyEntries, setHistoryEntries] = useState<InventoryHistoryEntry[]>(
+    [],
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,8 +52,13 @@ export default function InventoryPage() {
       setError(null);
 
       try {
-        const products = await fetchOwnerInventory();
+        const [products, history] = await Promise.all([
+          fetchOwnerInventory(),
+          fetchOwnerInventoryHistory(),
+        ]);
+
         setInventory(Array.isArray(products) ? products : []);
+        setHistoryEntries(Array.isArray(history) ? history : []);
       } catch (err: any) {
         setError(err?.message ?? "Failed to load inventory");
       } finally {
@@ -258,20 +257,31 @@ export default function InventoryPage() {
         </div>
 
         <div className="space-y-4">
-          {history.map((item) => (
-            <div
-              key={item.id}
-              className="bg-[#0D0D0D] border border-[#1F1F1F] rounded-2xl p-5 flex items-center justify-between"
-            >
-              <div>
-                <h3 className="text-white font-medium">{item.action}</h3>
-
-                <p className="text-gray-500 text-sm mt-1">{item.time}</p>
+          {historyEntries.length > 0 ? (
+            historyEntries.map((item) => (
+              <div
+                key={item._id}
+                className="bg-[#0D0D0D] border border-[#1F1F1F] rounded-2xl p-5 flex flex-col gap-3"
+              >
+                <div>
+                  <h3 className="text-white font-medium">{item.action}</h3>
+                  <p className="text-gray-400 text-sm mt-1">
+                    {item.productName} ·{" "}
+                    {item.quantity >= 0 ? `+${item.quantity}` : item.quantity}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                  <span>{new Date(item.createdAt).toLocaleString()}</span>
+                  <span>{item.details}</span>
+                </div>
               </div>
-
-              <div className="w-3 h-3 rounded-full bg-[#7F1D1D]" />
+            ))
+          ) : (
+            <div className="text-gray-400 text-center py-8">
+              No inventory history yet. Your restock and stock updates will
+              appear here.
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>

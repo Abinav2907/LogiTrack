@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Search, Crown } from "lucide-react";
+import { Bell, Crown } from "lucide-react";
 import { JSX } from "react/jsx-runtime";
 
 const plans = [
@@ -17,7 +17,6 @@ const notifications = [
 ];
 
 export default function Topbar(): JSX.Element {
-  const [search, setSearch] = useState("");
   const [isPlanOpen, setIsPlanOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [userName, setUserName] = useState("User");
@@ -29,46 +28,16 @@ export default function Topbar(): JSX.Element {
     }
   }, []);
 
-  function dispatchSearch(query: string) {
-    const event = new CustomEvent("global-search", {
-      detail: { query },
-    });
-    window.dispatchEvent(event);
-  }
-
   return (
     <div className="w-full h-20 bg-[#111111] border-b border-neutral-900 px-8 flex items-center justify-between">
       <div>
         <h1 className="text-2xl font-bold text-white">Owner Dashboard</h1>
-        <p className="text-neutral-500 text-sm mt-1">Welcome back, {userName}</p>
+        <p className="text-neutral-500 text-sm mt-1">
+          Welcome back, {userName}
+        </p>
       </div>
 
       <div className="flex items-center gap-5">
-        <div className="flex items-center gap-3 bg-[#0B0B0B] border border-neutral-800 px-4 py-3 rounded-2xl w-[320px]">
-          <button
-            type="button"
-            onClick={() => dispatchSearch(search)}
-            className="text-neutral-500 hover:text-white transition-colors"
-            aria-label="Trigger global search"
-          >
-            <Search size={18} aria-hidden="true" />
-          </button>
-
-          <input
-            type="text"
-            aria-label="Global search"
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                dispatchSearch(search);
-              }
-            }}
-            className="bg-transparent outline-none text-white placeholder:text-neutral-500 w-full"
-          />
-        </div>
-
         <div className="relative">
           <button
             type="button"
