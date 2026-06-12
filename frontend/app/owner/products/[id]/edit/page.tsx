@@ -2,6 +2,7 @@
 
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
+import { fetchOwnerProductById, updateOwnerProduct } from "@/lib/api";
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -23,18 +24,7 @@ export default function EditProductPage() {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("token");
-
-const res = await fetch(`http://localhost:5000/api/products/${id}`, {
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        if (!json?.success) throw new Error(json?.message ?? "Failed to load");
-
-        const p = json.data;
+        const p = await fetchOwnerProductById(id);
         setName(p.name ?? "");
         setSku(p.sku ?? "");
         setPrice(p.price != null ? String(p.price) : "");
@@ -69,20 +59,7 @@ const res = await fetch(`http://localhost:5000/api/products/${id}`, {
     };
 
     try {
-      const token = localStorage.getItem("token");
-
-const res = await fetch(`http://localhost:5000/api/products/${id}`, {
-  method: "PUT",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  },
-  body: JSON.stringify(payload),
-});
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      if (!json?.success) throw new Error(json?.message ?? "Update failed");
-
+      await updateOwnerProduct(id, payload);
       router.push("/owner/products");
     } catch (err: any) {
       setError(err?.message ?? "Failed to update product");

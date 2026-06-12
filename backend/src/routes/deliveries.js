@@ -1,4 +1,5 @@
 const express = require('express');
+const authenticateToken = require('../middleware/authenticateToken');
 const {
   getAllDeliveries,
   getActiveDeliveries,
@@ -12,6 +13,7 @@ const {
 } = require('../controllers/deliveryController.js');
 
 const router = express.Router();
+router.use(authenticateToken);
 
 // Dashboard
 router.get('/dashboard', getDashboard);

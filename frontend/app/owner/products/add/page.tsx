@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createOwnerProduct } from "@/lib/api";
 
 const DEFAULT_IMAGE =
   "https://images.unsplash.com/photo-1580894908361-967195033215";
@@ -36,21 +37,7 @@ export default function AddProductPage() {
     };
 
     try {
-      const token = localStorage.getItem("token");
-
-const res = await fetch("http://localhost:5000/api/products", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  },
-  body: JSON.stringify(payload),
-});
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      if (!json?.success) throw new Error(json?.message ?? "Create failed");
-
+      await createOwnerProduct(payload);
       router.push("/owner/products");
     } catch (err: any) {
       setError(err?.message ?? "Failed to create product");

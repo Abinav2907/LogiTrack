@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Search, Pencil, Trash2 } from "lucide-react";
+import { fetchOwnerProducts, deleteOwnerProduct } from "@/lib/api";
 
 const DEFAULT_IMAGE =
   "https://images.unsplash.com/photo-1580894908361-967195033215";
@@ -39,20 +40,9 @@ export default function ProductsPage() {
       setError(null);
 
       try {
-     const token = localStorage.getItem("token");
+        const products = await fetchOwnerProducts();
 
-const res = await fetch("http://localhost:5000/api/products", {
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        if (!json || json.success !== true) {
-          throw new Error(json?.message ?? "Unexpected API response");
-        }
-
-        const mapped: ProductView[] = (json.data as ApiProduct[]).map((p) => {
+        const mapped: ProductView[] = (products as ApiProduct[]).map((p) => {
           const stock = typeof p.stock === "number" ? p.stock : Number(p.stock) || 0;
           const status =
             stock <= 0 ? "Out of Stock" : stock <= 5 ? "Low Stock" : "In Stock";
@@ -107,14 +97,7 @@ const res = await fetch("http://localhost:5000/api/products", {
     setItems(updated);
 
     try {
-      const token = localStorage.getItem("token");
-
-await fetch(`http://localhost:5000/api/products/${id}`, {
-  method: "DELETE",
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
+      await deleteOwnerProduct(id);
     } catch (err: any) {
       setError(err?.message ?? "Failed to delete product");
       // keep optimistic change; if you prefer to revert on failure, implement revert logic here

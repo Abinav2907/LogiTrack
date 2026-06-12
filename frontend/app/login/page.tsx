@@ -48,6 +48,7 @@ export default function LoginPage() {
       if (res.ok) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("userName", data.user.fullName);
+        localStorage.setItem("userId", data.user._id);
 
         if (selectedRole === "Business Owner") {
           router.push("/owner");

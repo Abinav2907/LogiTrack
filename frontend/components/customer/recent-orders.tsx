@@ -14,7 +14,7 @@ const statusStyles = {
 };
 
 export function RecentOrders() {
-  const [recentOrders, setRecentOrders] = useState(orders.slice(0, 5));
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,14 +22,17 @@ export function RecentOrders() {
       try {
         const ordersData = await fetchOrders();
         if (Array.isArray(ordersData)) {
-          const normalized = ordersData.map((o: any, i: number) => ({
-            id: o.id || o._id || o.orderId || `order-${i}`,
-            customer: o.customer || o.customerName || "Unknown",
-            status: o.status || "pending",
-            amount: o.amount || o.totalPrice || 0,
-            date: o.date || o.createdAt || new Date().toISOString(),
-          }));
-          setRecentOrders(normalized.slice(0, 5));
+          const normalized = ordersData
+            .map((o: any, i: number) => ({
+              id: o.id || o._id || o.orderId || `order-${i}`,
+              customer: o.customer || o.customerName || "Unknown",
+              status: o.status || "pending",
+              amount: o.amount || o.totalPrice || 0,
+              date: o.date || o.createdAt || o.updatedAt || new Date().toISOString(),
+            }))
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 5);
+          setRecentOrders(normalized);
         }
       } catch (error) {
         // Silently fall back to defaults

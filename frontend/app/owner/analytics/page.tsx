@@ -17,8 +17,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-
-const API_URL = "http://localhost:5000/api/analytics";
+import { fetchAnalytics } from "@/lib/api";
 
 interface AnalyticsData {
   totalRevenue: number;
@@ -53,22 +52,13 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchAnalytics() {
+    async function loadAnalytics() {
       setLoading(true);
       setError(null);
 
       try {
-        const response = await fetch(API_URL);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch analytics (${response.status})`);
-        }
-
-        const json = await response.json();
-        if (!json?.success) {
-          throw new Error(json?.message ?? "Invalid API response");
-        }
-
-        setAnalytics(json.data);
+        const analyticsData = await fetchAnalytics();
+        setAnalytics(analyticsData);
       } catch (err: any) {
         setError(err?.message ?? "Unable to load analytics");
       } finally {
@@ -76,7 +66,7 @@ export default function AnalyticsPage() {
       }
     }
 
-    fetchAnalytics();
+    loadAnalytics();
   }, []);
 
   // Generate synthetic chart data from API values

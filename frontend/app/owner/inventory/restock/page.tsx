@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-const API_URL = "http://localhost:5000/api/inventory";
+import { fetchOwnerInventory, updateOwnerStock } from "@/lib/api";
 
 interface InventoryProduct {
   _id: string;
@@ -29,19 +28,9 @@ export default function InventoryRestockPage() {
       setError(null);
 
       try {
-        const response = await fetch(API_URL);
-        if (!response.ok) {
-          throw new Error(`Failed to load inventory (${response.status})`);
-        }
-
-        const json = await response.json();
-        if (!json?.success) {
-          throw new Error(json?.message ?? "Invalid inventory response");
-        }
-
-        const products: InventoryProduct[] = json.data ?? [];
-        setInventory(products);
-        setSelectedId(products[0]?._id ?? "");
+        const products = await fetchOwnerInventory();
+        setInventory(Array.isArray(products) ? products : []);
+        setSelectedId(Array.isArray(products) && products.length ? products[0]._id : "");
       } catch (err: any) {
         setError(err?.message ?? "Unable to load inventory");
       } finally {
@@ -59,20 +48,7 @@ export default function InventoryRestockPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/${selectedId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ delta: addAmount }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update stock (${response.status})`);
-      }
-
-      const json = await response.json();
-      if (!json?.success) {
-        throw new Error(json?.message ?? "Failed to update inventory");
-      }
+      await updateOwnerStock(selectedId, { delta: addAmount });
 
       router.push("/owner/inventory");
     } catch (err: any) {
@@ -89,8 +65,9 @@ export default function InventoryRestockPage() {
       <h1 className="text-3xl font-bold text-white mb-4">Restock Inventory</h1>
 
       <div className="space-y-4 max-w-md">
-        <label className="block text-gray-400">Select product</label>
+        <label htmlFor="product-select" className="block text-gray-400">Select product</label>
         <select
+          id="product-select"
           value={selectedId != null ? selectedId : ""}
           onChange={(e) => setSelectedId(e.target.value)}
           className="w-full bg-[#111111] border border-[#2A2A2A] rounded-2xl px-4 py-3 text-white outline-none"

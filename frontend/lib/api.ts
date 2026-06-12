@@ -84,7 +84,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 ========================= */
 
 export async function fetchOrders(): Promise<any[]> {
-  return apiRequest<any[]>("/api/orders");
+  return apiRequest<any[]>('/api/customer/orders');
 }
 
 export async function fetchProducts(): Promise<any[]> {
@@ -98,6 +98,13 @@ export async function fetchCustomerOrders(): Promise<any[]> {
 
 export async function fetchCustomerProducts(): Promise<any[]> {
   return apiRequest<any[]>("/api/customer/products");
+}
+
+export async function createCustomerOrder(orderData: unknown): Promise<any> {
+  return apiRequest<any>("/api/customer/orders", {
+    method: "POST",
+    body: JSON.stringify(orderData),
+  });
 }
 
 export async function fetchTrackingByOrderId(orderId: string): Promise<any> {
@@ -114,6 +121,70 @@ export async function fetchAnalytics(): Promise<any> {
 
 export async function fetchDashboardStats(): Promise<any> {
   return apiRequest<any>("/api/stats");
+}
+
+/* =========================
+   Owner APIs
+========================= */
+export async function fetchOwnerProducts(): Promise<any[]> {
+  return apiRequest<any[]>("/api/products");
+}
+
+export async function fetchOwnerProductById(id: string): Promise<any> {
+  return apiRequest<any>(`/api/products/${id}`);
+}
+
+export async function createOwnerProduct(payload: unknown): Promise<any> {
+  return apiRequest<any>("/api/products", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateOwnerProduct(id: string, payload: unknown): Promise<any> {
+  return apiRequest<any>(`/api/products/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteOwnerProduct(id: string): Promise<any> {
+  return apiRequest<any>(`/api/products/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function fetchOwnerInventory(): Promise<any> {
+  return apiRequest<any>("/api/inventory");
+}
+
+export async function updateOwnerStock(
+  productId: string,
+  payload: unknown,
+): Promise<any> {
+  return apiRequest<any>(`/api/inventory/${productId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchOwnerOrders(): Promise<any[]> {
+  return apiRequest<any[]>("/api/orders/business");
+}
+
+export async function fetchOwnerDeliveries(): Promise<any> {
+  return apiRequest<any>("/api/deliveries");
+}
+
+export async function fetchOwnerDeliveryAgents(): Promise<any> {
+  return apiRequest<any>("/api/delivery-agents");
+}
+
+export async function createOwnerDeliveryAgent(payload: unknown): Promise<any> {
+  return apiRequest<any>("/api/delivery-agents", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 /* =========================

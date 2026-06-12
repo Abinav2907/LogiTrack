@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createOwnerDeliveryAgent } from "@/lib/api";
 
 export default function AddAgentPage() {
   const router = useRouter();
@@ -18,26 +19,12 @@ export default function AddAgentPage() {
     }
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/delivery-agents",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: name.trim(),
-            contact: contact.trim(),
-            vehicle: vehicle.trim(),
-            isAvailable: status === "Active",
-          }),
-        },
-      );
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Unable to add agent");
-      }
+      await createOwnerDeliveryAgent({
+        name: name.trim(),
+        contact: contact.trim(),
+        vehicle: vehicle.trim(),
+        isAvailable: status === "Active",
+      });
 
       router.push("/owner/delivery");
     } catch (err: any) {

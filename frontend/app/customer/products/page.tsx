@@ -2,15 +2,21 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/lib/mock-data";
-import { fetchProducts } from "@/lib/api";
-import { Search, Filter, ShoppingCart, Heart } from "lucide-react";
+import { fetchProducts, API_BASE_URL } from "@/lib/api";
+import { Search, Filter, Heart } from "lucide-react";
 
 type NormalizedProduct = Product;
+
+type OrderMessage = {
+  type: "success" | "error";
+  text: string;
+};
 
 const categories = ["All", "Audio", "Accessories", "Wearables", "Storage"];
 
@@ -20,7 +26,9 @@ export default function ProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [cartItems, setCartItems] = useState<string[]>([]);
+  const [orderMessage, setOrderMessage] = useState<OrderMessage | null>(null);
+  const [orderingProductId, setOrderingProductId] = useState<string | null>(null);
+  const router = useRouter();
 
   const normalizeProduct = (
     product: any,
@@ -39,10 +47,78 @@ export default function ProductsPage() {
     category: product.category || "General",
   });
 
-  const handleAddToCart = (productId: string) => {
-    setCartItems((current) =>
-      current.includes(productId) ? current : [...current, productId],
-    );
+  const handleOrderNow = async (product: NormalizedProduct) => {
+    setOrderMessage(null);
+    setOrderingProductId(product.id);
+
+    const userId =
+      typeof window !== "undefined"
+        ? localStorage.getItem("userId")
+        : null;
+
+    if (!userId) {
+      setOrderMessage({
+        type: "error",
+        text: "Please sign in before placing an order.",
+      });
+      setOrderingProductId(null);
+      return;
+    }
+
+    const orderPayload = {
+      userId,
+      items: [
+        {
+          productId: product.id,
+          quantity: 1,
+        },
+      ],
+    };
+
+    console.log("=== FRONTEND: PLACING ORDER ===");
+    console.log("Product selected:", product.id, "Name:", product.name);
+    console.log("Customer (userId):", userId);
+    console.log("Sending payload:", JSON.stringify(orderPayload));
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            typeof window !== "undefined"
+              ? `Bearer ${localStorage.getItem("token")}`
+              : "",
+        },
+        body: JSON.stringify(orderPayload),
+      });
+
+      console.log("Response status:", response.status);
+      const responseText = await response.text();
+      console.log("Response body:", responseText);
+
+      if (!response.ok) {
+        throw new Error(responseText || "Failed to place order.");
+      }
+
+      setOrderMessage({
+        type: "success",
+        text: "Order placed successfully. Redirecting...",
+      });
+
+      setTimeout(() => {
+        router.push("/customer/orders");
+      }, 800);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to place order. Please try again.";
+      console.error("Order error:", errorMessage);
+      setOrderMessage({
+        type: "error",
+        text: errorMessage,
+      });
+    } finally {
+      setOrderingProductId(null);
+    }
   };
 
   useEffect(() => {
@@ -117,7 +193,20 @@ export default function ProductsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {loading ? (
+        {orderMessage && (
+        <div className="col-span-full text-sm">
+          <p
+            className={
+              orderMessage.type === "success"
+                ? "text-emerald-300"
+                : "text-red-300"
+            }
+          >
+            {orderMessage.text}
+          </p>
+        </div>
+      )}
+      {loading ? (
           <div className="col-span-full flex items-center justify-center py-16">
             <p className="text-sm text-muted-foreground">Loading products...</p>
           </div>
@@ -159,18 +248,18 @@ export default function ProductsPage() {
                   <p className="mt-1 text-sm text-muted-foreground">
                     Premium quality product
                   </p>
-                  <div className="mt-4 flex items-center justify-between">
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-xl font-bold text-foreground">
                       ₹{product.price.toLocaleString()}
                     </span>
                     <Button
                       size="sm"
+                      variant="destructive"
                       className="gap-2"
-                      onClick={() => handleAddToCart(product.id)}
-                      disabled={cartItems.includes(product.id)}
+                      onClick={() => handleOrderNow(product)}
+                      disabled={orderingProductId === product.id}
                     >
-                      <ShoppingCart className="h-4 w-4" />
-                      {cartItems.includes(product.id) ? "Added" : "Add to Cart"}
+                      {orderingProductId === product.id ? "Ordering..." : "Order Now"}
                     </Button>
                   </div>
                 </div>

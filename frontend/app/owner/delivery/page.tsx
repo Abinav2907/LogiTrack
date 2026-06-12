@@ -6,9 +6,7 @@ import DeliveryMap from "@/components/owner/DeliveryMap";
 import AgentCard from "@/components/owner/AgentCard";
 import DeliveryTable from "@/components/owner/DeliveryTable";
 import { Truck, User, PackageCheck, Clock3 } from "lucide-react";
-
-const API_URL = "http://localhost:5000/api/deliveries";
-const DELIVERY_AGENTS_URL = "http://localhost:5000/api/delivery-agents";
+import { fetchOwnerDeliveries, fetchOwnerDeliveryAgents } from "@/lib/api";
 
 interface Tracking {
   status: string;
@@ -73,47 +71,13 @@ export default function DeliveryPage() {
       setError(null);
 
       try {
-        const [deliveriesRes, agentsRes] = await Promise.all([
-          fetch(API_URL),
-          fetch(DELIVERY_AGENTS_URL),
+        const [deliveriesData, agentsData] = await Promise.all([
+          fetchOwnerDeliveries(),
+          fetchOwnerDeliveryAgents(),
         ]);
 
-        if (!deliveriesRes.ok) {
-          throw new Error(
-            `Failed to fetch deliveries (${deliveriesRes.status})`,
-          );
-        }
-        if (!agentsRes.ok) {
-          throw new Error(`Failed to fetch agents (${agentsRes.status})`);
-        }
-
-        const deliveriesJson = await deliveriesRes.json();
-        const agentsJson = await agentsRes.json();
-
-        let deliveryData: Delivery[] = [];
-        if (Array.isArray(deliveriesJson)) {
-          deliveryData = deliveriesJson;
-        } else if (
-          deliveriesJson?.success === true &&
-          Array.isArray(deliveriesJson.data)
-        ) {
-          deliveryData = deliveriesJson.data;
-        } else if (Array.isArray(deliveriesJson?.data)) {
-          deliveryData = deliveriesJson.data;
-        } else {
-          throw new Error(
-            deliveriesJson?.message ?? "Invalid deliveries response",
-          );
-        }
-
-        setDeliveries(deliveryData);
-        setDeliveryAgents(
-          Array.isArray(agentsJson)
-            ? agentsJson
-            : Array.isArray(agentsJson.data)
-              ? agentsJson.data
-              : [],
-        );
+        setDeliveries(Array.isArray(deliveriesData) ? deliveriesData : []);
+        setDeliveryAgents(Array.isArray(agentsData) ? agentsData : []);
       } catch (err: any) {
         setError(err?.message ?? "Unable to load delivery data");
       } finally {

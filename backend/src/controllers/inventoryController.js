@@ -3,7 +3,9 @@ const Product = require('../models/Product');
 // Fetch inventory overview
 exports.getInventory = async (req, res, next) => {
   try {
-    const products = await Product.find().select('name stock minStock price category');
+    const products = await Product.find({ ownerId: req.user.id }).select(
+      'name stock minStock price category',
+    );
     const totalItems = products.reduce((sum, p) => sum + p.stock, 0);
     res.json({ success: true, count: products.length, totalItems, data: products });
   } catch (err) {
@@ -14,7 +16,10 @@ exports.getInventory = async (req, res, next) => {
 // Fetch low stock items
 exports.getLowStock = async (req, res, next) => {
   try {
-    const low = await Product.find({ $expr: { $lt: ['$stock', '$minStock'] } }).select('name stock minStock');
+    const low = await Product.find({
+      ownerId: req.user.id,
+      $expr: { $lt: ['$stock', '$minStock'] },
+    }).select('name stock minStock');
     res.json({ success: true, count: low.length, data: low });
   } catch (err) {
     next(err);
@@ -26,7 +31,7 @@ exports.updateStock = async (req, res, next) => {
   try {
     const { productId } = req.params;
     const { set, delta } = req.body;
-    const product = await Product.findById(productId);
+    const product = await Product.findOne({ _id: productId, ownerId: req.user.id });
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
 
     if (typeof set === 'number') {

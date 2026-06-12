@@ -12,14 +12,14 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-
-const API_BASE = "http://localhost:5000/api";
-const PRODUCTS_URL = `${API_BASE}/products`;
-const ORDERS_URL = `${API_BASE}/orders`;
-const INVENTORY_URL = `${API_BASE}/inventory`;
-const ANALYTICS_URL = `${API_BASE}/analytics`;
-const DELIVERIES_URL = `${API_BASE}/deliveries`;
-const DELIVERY_AGENTS_URL = `${API_BASE}/delivery-agents`;
+import {
+  fetchOwnerProducts,
+  fetchOwnerOrders,
+  fetchAnalytics,
+  fetchOwnerInventory,
+  fetchOwnerDeliveries,
+  fetchOwnerDeliveryAgents,
+} from "@/lib/api";
 
 interface Product {
   _id: string;
@@ -110,40 +110,20 @@ export default function OwnerDashboard() {
       setError(null);
 
       try {
-        const [pRes, oRes, iRes, aRes, dRes, agentsRes] = await Promise.all([
-          fetch(PRODUCTS_URL),
-          fetch(ORDERS_URL),
-          fetch(INVENTORY_URL),
-          fetch(ANALYTICS_URL),
-          fetch(DELIVERIES_URL),
-          fetch(DELIVERY_AGENTS_URL),
-        ]);
-        if (!pRes.ok) throw new Error(`Products fetch failed (${pRes.status})`);
-        if (!oRes.ok) throw new Error(`Orders fetch failed (${oRes.status})`);
-        if (!iRes.ok)
-          throw new Error(`Inventory fetch failed (${iRes.status})`);
-        if (!aRes.ok)
-          throw new Error(`Analytics fetch failed (${aRes.status})`);
-        if (!dRes.ok)
-          throw new Error(`Deliveries fetch failed (${dRes.status})`);
-        if (!agentsRes.ok)
-          throw new Error(`Agents fetch failed (${agentsRes.status})`);
+        const products = await fetchOwnerProducts();
+        const businessOrders = await fetchOwnerOrders();
+        const inventoryData = await fetchOwnerInventory();
+        const analyticsData = await fetchAnalytics();
+        const deliveriesData = await fetchOwnerDeliveries();
+        const deliveryAgentsData = await fetchOwnerDeliveryAgents();
 
-        const pJson = await pRes.json();
-        const oJson = await oRes.json();
-        const iJson = await iRes.json();
-        const aJson = await aRes.json();
-        const dJson = await dRes.json();
-        const agentsJson = await agentsRes.json();
+        setProducts(Array.isArray(products) ? products : []);
+        setOrders(Array.isArray(businessOrders) ? businessOrders : []);
+        setInventory(Array.isArray(inventoryData) ? inventoryData : []);
+        setAnalytics(analyticsData ?? null);
+        setDeliveries(Array.isArray(deliveriesData) ? deliveriesData : []);
+        setDeliveryAgents(Array.isArray(deliveryAgentsData) ? deliveryAgentsData : []);
 
-        setProducts(Array.isArray(pJson.data) ? pJson.data : []);
-        setOrders(Array.isArray(oJson.data) ? oJson.data : []);
-        setInventory(Array.isArray(iJson.data) ? iJson.data : []);
-        setAnalytics(aJson?.data ?? null);
-        setDeliveries(Array.isArray(dJson.data) ? dJson.data : []);
-        setDeliveryAgents(
-          Array.isArray(agentsJson.data) ? agentsJson.data : [],
-        );
       } catch (err: any) {
         setError(err?.message ?? "Failed to load dashboard data");
       } finally {

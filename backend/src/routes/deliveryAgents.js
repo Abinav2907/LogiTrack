@@ -1,4 +1,5 @@
 const express = require("express");
+const authenticateToken = require("../middleware/authenticateToken");
 const {
   getAllDeliveryAgents,
   getDeliveryAgentById,
@@ -8,6 +9,7 @@ const {
 } = require("../controllers/deliveryAgentController");
 
 const router = express.Router();
+router.use(authenticateToken);
 
 router.get("/", getAllDeliveryAgents);
 router.get("/:id", getDeliveryAgentById);

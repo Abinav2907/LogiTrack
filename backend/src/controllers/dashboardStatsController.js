@@ -3,7 +3,13 @@ const DashboardStats = require("../models/DashboardStats")
 exports.getDashboardStats = async (req, res) => {
   try {
     const stats = await DashboardStats.find().sort({ createdAt: -1 })
-    res.status(200).json(stats)
+    const normalized = stats.map((item) => ({
+      ...item.toObject(),
+      totalItems: item.items,
+      pendingOrders: item.pending,
+      totalRevenue: item.revenue,
+    }))
+    res.status(200).json(normalized)
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch dashboard stats", error: error.message })
   }

@@ -9,8 +9,7 @@ import {
   RefreshCcw,
   Search,
 } from "lucide-react";
-
-const API_URL = "http://localhost:5000/api/inventory";
+import { fetchOwnerInventory } from "@/lib/api";
 
 interface InventoryProduct {
   _id: string;
@@ -59,17 +58,8 @@ export default function InventoryPage() {
       setError(null);
 
       try {
-        const response = await fetch(API_URL);
-        if (!response.ok) {
-          throw new Error(`Fetch failed with status ${response.status}`);
-        }
-
-        const json = (await response.json()) as InventoryApiResponse;
-        if (!json?.success) {
-          throw new Error("Invalid API response");
-        }
-
-        setInventory(json.data ?? []);
+        const products = await fetchOwnerInventory();
+        setInventory(Array.isArray(products) ? products : []);
       } catch (err: any) {
         setError(err?.message ?? "Failed to load inventory");
       } finally {

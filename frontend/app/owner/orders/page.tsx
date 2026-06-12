@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ShoppingCart, Clock, CheckCircle, Truck } from "lucide-react";
-
-const API_URL = "http://localhost:5000/api/orders";
+import { fetchOwnerOrders } from "@/lib/api";
 
 interface Product {
   _id: string;
@@ -40,17 +39,8 @@ export default function OrdersPage() {
       setError(null);
 
       try {
-        const response = await fetch(API_URL);
-        if (!response.ok) {
-          throw new Error(`Failed to load orders (${response.status})`);
-        }
-
-        const json = await response.json();
-        if (!json || json.success !== true) {
-          throw new Error(json?.message ?? "Unexpected API response");
-        }
-
-        setOrders(json.data ?? []);
+        const ordersData = await fetchOwnerOrders();
+        setOrders(Array.isArray(ordersData) ? ordersData : []);
       } catch (err: any) {
         setError(err?.message ?? "Unable to load orders");
       } finally {
