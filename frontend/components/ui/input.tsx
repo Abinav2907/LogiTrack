@@ -1,10 +1,12 @@
+import type React from "react";
+
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   type?: string;
   placeholder: string;
   className?: string;
 }
 
-export default function Input({
+export function Input({
   type = "text",
   placeholder,
   className = "",
@@ -33,3 +35,5 @@ export default function Input({
     />
   );
 }
+
+export default Input;
