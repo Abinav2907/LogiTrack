@@ -1,9 +1,6 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import coreWebVitals from "eslint-config-next/core-web-vitals";
-import typescript from "eslint-config-next/typescript";
+import { defineConfig } from "eslint/config";
 
-export default defineConfig([
-  ...coreWebVitals,
-  ...typescript,
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
-]);
+export default defineConfig({
+  extends: ["next/core-web-vitals", "next/typescript"],
+  ignorePatterns: [".next/**", "out/**", "build/**", "next-env.d.ts"],
+});
