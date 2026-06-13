@@ -27,10 +27,11 @@
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^6.0.0",
     "mongoose": "^9.6.2",
-    "nodemailer": "^6.10.1"
+    "nodemailer": "^6.10.1",
+    "resend": "^6.12.4"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14",
-    "jest": "^30.0.0"
+    "jest": "^30.0.0",
+    "nodemon": "^3.1.14"
   }
 }

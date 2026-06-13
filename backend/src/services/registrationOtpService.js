@@ -2,6 +2,10 @@ const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
+
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const RegistrationOtp = require("../models/RegistrationOtp");
 
@@ -156,14 +160,10 @@ async function upsertOtpDocument(email) {
     { new: true, upsert: true, runValidators: true },
   );
 
-  const transporter = await createTransporter();
-  const fromName = process.env.GMAIL_FROM_NAME || "LogiTrack";
-
-  await transporter.sendMail({
-    from: `"${fromName}" <${process.env.GMAIL_USER}>`,
+  await resend.emails.send({
+    from: "onboarding@resend.dev",
     to: normalizedEmail,
     subject: "Your LogiTrack verification code",
-    text: `Your LogiTrack verification code is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`,
     html: buildOtpEmailHtml(otp, OTP_EXPIRY_MINUTES),
   });
 
