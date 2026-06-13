@@ -39,6 +39,16 @@ const userSchema = new mongoose.Schema(
     businessAddress: {
       type: String,
     },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

@@ -24,6 +24,10 @@ const authenticateToken = async (req, res, next) => {
     const user = await User.findById(userId).select("-password");
     if (!user) return res.status(401).json({ message: "User not found" });
 
+    if (user.isActive === false) {
+      return res.status(401).json({ message: "Account has been deleted" });
+    }
+
     req.user = user;
 
     next();

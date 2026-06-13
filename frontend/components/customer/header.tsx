@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AccountDeletionDialog } from "@/components/common/account-deletion-dialog";
 import { useLogout } from "@/lib/logout";
 
 export function CustomerHeader() {
@@ -73,6 +74,7 @@ export function CustomerHeader() {
           <DropdownMenuContent align="end">
             <DropdownMenuItem>Profile</DropdownMenuItem>
             <DropdownMenuItem>Settings</DropdownMenuItem>
+            <AccountDeletionDialog roleLabel="Customer" triggerMode="menuItem" />
             <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -32,6 +32,7 @@ const ProductSchema = new mongoose.Schema(
     stock: { type: Number, default: 0, min: 0 },
     minStock: { type: Number, default: 5, min: 0 },
     isActive: { type: Boolean, default: true },
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

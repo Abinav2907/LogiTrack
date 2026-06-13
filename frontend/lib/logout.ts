@@ -11,6 +11,7 @@ export const useLogout = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("userId");
     localStorage.removeItem("role");
+    localStorage.removeItem("userName");
 
     // Redirect to login
     router.push("/login");

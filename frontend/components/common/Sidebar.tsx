@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLogout } from "@/lib/logout";
+import { AccountDeletionDialog } from "@/components/common/account-deletion-dialog";
 
 import {
   Currency,
@@ -74,12 +75,18 @@ const Sidebar = () => {
           );
         })}
       </div>
-      <button
-        onClick={logout}
-        className="w-full mt-8 bg-red-600 hover:bg-red-700 text-white py-3 rounded-2xl transition-all"
-      >
-        Logout
-      </button>
+      <div className="mt-8 space-y-3">
+        <AccountDeletionDialog
+          roleLabel="Delivery Agent"
+          buttonClassName="w-full justify-start border-[#7F1D1D]/50 bg-[#7F1D1D]/10 text-[#FCA5A5] hover:bg-[#7F1D1D]/20 hover:text-white"
+        />
+        <button
+          onClick={logout}
+          className="w-full mt-0 bg-red-600 hover:bg-red-700 text-white py-3 rounded-2xl transition-all"
+        >
+          Logout
+        </button>
+      </div>
     </div>
   );
 };

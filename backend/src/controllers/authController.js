@@ -1,6 +1,18 @@
-const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
+
+const User = require("../models/User");
+const Order = require("../models/Order");
+const Product = require("../models/Product");
+const Delivery = require("../models/Delivery");
+const {
+  isGmailAddress,
+  normalizeEmail,
+  upsertOtpDocument,
+  verifyOtpCode,
+  completeRegistration: completeRegistrationFlow,
+} = require("../services/registrationOtpService");
 
 const PASSWORD_RULES = [
   { test: (p) => p.length >= 8, message: "Password must be at least 8 characters" },
@@ -22,36 +34,111 @@ function validatePassword(password) {
   return failedRule ? failedRule.message : null;
 }
 
+const ALLOWED_ROLES = ["Business Owner", "Delivery Agent", "Customer"];
+
+const normalizeUserResponse = (user) => {
+  if (!user) {
+    return null;
+  }
+
+  const payload = user.toObject ? user.toObject() : { ...user };
+  delete payload.password;
+  return payload;
+};
+
+const DELETION_CONFIRMATION = "DELETE MY ACCOUNT";
+
+async function markRelatedDeliveriesInactive(orderIds, reason) {
+  if (!orderIds.length) {
+    return;
+  }
+
+  await Delivery.updateMany(
+    { order: { $in: orderIds } },
+    {
+      $set: {
+        assignedAgent: null,
+        status: "Returned",
+        lastUpdated: reason,
+      },
+      $push: {
+        tracking: {
+          status: "Account deleted",
+          message: reason,
+          timestamp: new Date(),
+        },
+      },
+    },
+  ).catch(() => null);
+}
+
+async function cancelOpenOrders(filter, reason) {
+  const openOrders = await Order.find({
+    ...filter,
+    status: { $nin: ["completed", "delivered"] },
+  });
+
+  if (!openOrders.length) {
+    return [];
+  }
+
+  const cancelledAt = new Date();
+  const orderIds = openOrders.map((order) => order._id);
+
+  await Order.updateMany(
+    { _id: { $in: orderIds } },
+    {
+      $set: {
+        status: "cancelled",
+        cancellationReason: reason,
+        cancelledAt,
+        assignedAgent: null,
+      },
+    },
+  );
+
+  await markRelatedDeliveriesInactive(orderIds, reason);
+
+  return openOrders;
+}
+
+async function softDeleteUser(user) {
+  const deletedAt = new Date();
+  const deletedEmail = `deleted-${user._id.toString()}@logitrack.local`;
+
+  await User.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        isActive: false,
+        deletedAt,
+        email: deletedEmail,
+      },
+    },
+  );
+}
+
 // ================= REGISTER =================
 
 const register = async (req, res) => {
   try {
-    const { fullName, email, password, role } = req.body;
-
-    const passwordError = validatePassword(password);
-    if (passwordError) {
-      return res.status(400).json({ message: passwordError });
-    }
-
-    // CHECK USER EXISTS
-    const userExists = await User.findOne({ email });
-
-    if (userExists) {
-      return res.status(400).json({
-        message: "User already exists",
-      });
-    }
-
-    // HASH PASSWORD
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // CREATE USER
-    const user = await User.create({
+    const {
+      registrationToken,
       fullName,
       email,
-      password: hashedPassword,
+      password,
+      confirmPassword,
       role,
+    } = req.body;
+
+    const user = await completeRegistrationFlow({
+      registrationToken,
+      fullName,
+      email,
+      password,
+      confirmPassword,
+      role,
+      passwordValidator: validatePassword,
     });
 
     // CREATE TOKEN
@@ -62,12 +149,12 @@ const register = async (req, res) => {
     res.status(201).json({
       message: "User Registered Successfully",
       token,
-      user,
+      user: normalizeUserResponse(user),
     });
   } catch (error) {
     console.log(error);
 
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       message: error.message,
     });
   }
@@ -85,6 +172,12 @@ const login = async (req, res) => {
     if (!user) {
       return res.status(400).json({
         message: "Invalid Credentials",
+      });
+    }
+
+    if (user.isActive === false) {
+      return res.status(403).json({
+        message: "Account has been deleted",
       });
     }
 
@@ -111,7 +204,7 @@ const login = async (req, res) => {
     res.status(200).json({
       message: "Login Successful",
       token,
-      user,
+      user: normalizeUserResponse(user),
     });
   } catch (error) {
     console.log(error);
@@ -122,7 +215,184 @@ const login = async (req, res) => {
   }
 };
 
+const requestRegistrationOtp = async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!normalizedEmail || !isGmailAddress(normalizedEmail)) {
+      return res.status(400).json({
+        message: "Please enter a valid Gmail address",
+      });
+    }
+
+    const existingUser = await User.findOne({
+      email: normalizedEmail,
+      isActive: { $ne: false },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        message: "An account with this email already exists",
+      });
+    }
+
+    const result = await upsertOtpDocument(normalizedEmail);
+
+    res.status(200).json({
+      message: "OTP sent to your Gmail address",
+      email: result.email,
+      resendAfterSeconds: result.resendAfterSeconds,
+      expiresAt: result.expiresAt,
+    });
+  } catch (error) {
+    console.error("requestRegistrationOtp error:", error);
+    return res.status(error.statusCode || 500).json({
+      message: error.message || "Failed to send OTP",
+      ...(error.retryAfter ? { retryAfter: error.retryAfter } : {}),
+    });
+  }
+};
+
+const verifyRegistrationOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body || {};
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!normalizedEmail || !isGmailAddress(normalizedEmail)) {
+      return res.status(400).json({
+        message: "Please enter a valid Gmail address",
+      });
+    }
+
+    if (!otp || String(otp).trim().length !== 6) {
+      return res.status(400).json({
+        message: "Enter the 6-digit OTP",
+      });
+    }
+
+    const result = await verifyOtpCode(normalizedEmail, otp);
+
+    return res.status(200).json({
+      message: "Email verified successfully",
+      email: result.email,
+      registrationToken: result.registrationToken,
+    });
+  } catch (error) {
+    console.error("verifyRegistrationOtp error:", error);
+    return res.status(error.statusCode || 500).json({
+      message: error.message || "Failed to verify OTP",
+    });
+  }
+};
+
+const deleteAccount = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { currentPassword, confirmText } = req.body || {};
+
+    if (!currentPassword || typeof currentPassword !== "string") {
+      return res.status(400).json({
+        message: "Current password is required",
+      });
+    }
+
+    if (confirmText !== DELETION_CONFIRMATION) {
+      return res.status(400).json({
+        message: `Type ${DELETION_CONFIRMATION} to confirm account deletion`,
+      });
+    }
+
+    const freshUser = await User.findById(user._id);
+    if (!freshUser || freshUser.isActive === false) {
+      return res.status(401).json({ message: "Account has already been deleted" });
+    }
+
+    const passwordMatches = await bcrypt.compare(
+      currentPassword,
+      freshUser.password,
+    );
+    if (!passwordMatches) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    const now = new Date();
+
+    if (freshUser.role === "Business Owner") {
+      await Product.updateMany(
+        { ownerId: freshUser._id },
+        {
+          $set: {
+            isActive: false,
+            deletedAt: now,
+          },
+        },
+      );
+
+      await cancelOpenOrders(
+        { ownerId: freshUser._id },
+        "Business owner account deleted.",
+      );
+    }
+
+    if (freshUser.role === "Customer") {
+      await cancelOpenOrders(
+        { customerId: freshUser._id },
+        "Customer account deleted.",
+      );
+    }
+
+    if (freshUser.role === "Delivery Agent") {
+      await Order.updateMany(
+        {
+          assignedAgent: freshUser._id,
+          status: { $nin: ["completed", "delivered", "cancelled"] },
+        },
+        {
+          $set: {
+            assignedAgent: null,
+          },
+        },
+      );
+
+      await Delivery.updateMany(
+        { assignedAgent: freshUser._id },
+        {
+          $set: {
+            assignedAgent: null,
+            lastUpdated: "Delivery agent account deleted.",
+          },
+          $push: {
+            tracking: {
+              status: "Account deleted",
+              message: "Delivery agent account deleted.",
+              timestamp: now,
+            },
+          },
+        },
+      ).catch(() => null);
+    }
+
+    await softDeleteUser(freshUser);
+
+    return res.status(200).json({
+      message: `${freshUser.role} account deleted successfully`,
+      role: freshUser.role,
+    });
+  } catch (error) {
+    console.error("deleteAccount error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   register,
   login,
+  deleteAccount,
+  requestRegistrationOtp,
+  verifyRegistrationOtp,
 };

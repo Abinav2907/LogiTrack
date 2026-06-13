@@ -119,6 +119,58 @@ export async function createCustomerOrder(orderData: unknown): Promise<any> {
   });
 }
 
+export async function requestRegistrationOtp(email: string): Promise<{
+  email: string;
+  resendAfterSeconds: number;
+  expiresAt: string;
+}> {
+  return apiRequest<{
+    email: string;
+    resendAfterSeconds: number;
+    expiresAt: string;
+  }>("/api/auth/register/request-otp", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function verifyRegistrationOtp(payload: {
+  email: string;
+  otp: string;
+}): Promise<{ email: string; registrationToken: string }> {
+  return apiRequest<{ email: string; registrationToken: string }>(
+    "/api/auth/register/verify-otp",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function completeRegistration(payload: {
+  registrationToken: string;
+  fullName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  role: string;
+}): Promise<any> {
+  return apiRequest<any>("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteCurrentAccount(payload: {
+  currentPassword: string;
+  confirmText: string;
+}): Promise<any> {
+  return apiRequest<any>("/api/auth/account", {
+    method: "DELETE",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function fetchTrackingByOrderId(orderId: string): Promise<any> {
   return apiRequest<any>(`/api/tracking/order/${orderId}`);
 }
