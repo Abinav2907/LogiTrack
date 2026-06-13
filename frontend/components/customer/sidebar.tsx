@@ -7,7 +7,6 @@ import {
   Package,
   ShoppingCart,
   CheckCircle,
-  BarChart3,
   Truck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,7 +16,6 @@ const navItems = [
   { href: "/customer/products", icon: Package, label: "Products" },
   { href: "/customer/cart", icon: ShoppingCart, label: "Cart" },
   { href: "/customer/orders", icon: CheckCircle, label: "Orders" },
-  { href: "/customer/analytics", icon: BarChart3, label: "Analytics" },
 ];
 
 export function CustomerSidebar() {

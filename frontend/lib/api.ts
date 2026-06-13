@@ -127,8 +127,17 @@ export async function fetchDeliveryByOrderId(orderId: string): Promise<any> {
   return apiRequest<any>(`/api/delivery/order/${orderId}`);
 }
 
-export async function fetchAnalytics(): Promise<any> {
-  return apiRequest<any>("/api/analytics");
+export interface OwnerAnalyticsData {
+  totalRevenue: number;
+  totalOrders: number;
+  salesGrowthPercent: number;
+  lowStockCount: number;
+  last30Revenue: number;
+  prev30Revenue: number;
+}
+
+export async function fetchAnalytics(): Promise<OwnerAnalyticsData> {
+  return apiRequest<OwnerAnalyticsData>("/api/analytics");
 }
 
 export async function fetchDashboardStats(): Promise<any> {
