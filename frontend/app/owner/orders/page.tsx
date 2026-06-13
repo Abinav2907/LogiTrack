@@ -23,7 +23,13 @@ interface Order {
   customerName: string;
   items: OrderItem[];
   totalPrice: number;
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled" | string;
+  status:
+    | "pending"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled"
+    | string;
   shippedAt: string | null;
   deliveredAt: string | null;
 }
@@ -52,10 +58,19 @@ export default function OrdersPage() {
   }, []);
 
   const totalOrders = orders.length;
-  const pendingCount = orders.filter((order) => order.status === "pending").length;
-  const deliveredCount = orders.filter((order) => order.status === "delivered").length;
-  const inDeliveryCount = orders.filter(
-    (order) => order.status === "processing" || order.status === "shipped",
+  const pendingCount = orders.filter(
+    (order) => order.status === "pending",
+  ).length;
+  // Treat both 'completed' and 'delivered' as delivered for owner reporting
+  const deliveredCount = orders.filter((order) =>
+    ["completed", "delivered"].includes((order.status || "").toLowerCase()),
+  ).length;
+
+  // In delivery includes assigned/processing/shipped/out-for-delivery
+  const inDeliveryCount = orders.filter((order) =>
+    ["assigned", "processing", "shipped", "out-for-delivery"].includes(
+      (order.status || "").toLowerCase(),
+    ),
   ).length;
 
   function getStatusClasses(status: string) {
@@ -203,17 +218,25 @@ export default function OrdersPage() {
                 <td className="p-5">
                   <span
                     className={`px-3 py-1 rounded-full text-sm ${
-                      order.status === "delivered"
+                      ["completed", "delivered"].includes(
+                        (order.status || "").toLowerCase(),
+                      )
                         ? "bg-green-500/20 text-green-400"
                         : "bg-yellow-500/20 text-yellow-400"
                     }`}
                   >
-                    {order.status === "delivered" ? "Paid" : "Pending"}
+                    {["completed", "delivered"].includes(
+                      (order.status || "").toLowerCase(),
+                    )
+                      ? "Paid"
+                      : "Pending"}
                   </span>
                 </td>
 
                 <td className="p-5">
-                  <span className={`px-3 py-1 rounded-full text-sm ${getStatusClasses(order.status)}`}>
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm ${getStatusClasses(order.status)}`}
+                  >
                     {order.status}
                   </span>
                 </td>

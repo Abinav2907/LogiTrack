@@ -14,14 +14,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { fetchOrders } from "@/lib/api";
-import { Search, Filter, Eye, Package, Truck, CheckCircle } from "lucide-react";
+import { Search, Eye, Package, Truck, CheckCircle } from "lucide-react";
 
 type CustomerOrder = {
   id: string;
   customer: string;
+  product: string;
   status: string;
   amount: number;
   date: string;
+  items?: Array<{ product: string; quantity: number; price: number }>;
 };
 
 const statusConfig = {
@@ -50,26 +52,30 @@ export default function OrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const normalizeOrder = (order: any, index: number): CustomerOrder => ({
-    id: String(order.id || order._id || order.orderId || `order-${index}`),
-    customer:
-      order.customer ||
-      order.customerName ||
-      order.customer_name ||
-      "Unknown customer",
-    status: order.status || "pending",
-    amount:
-      typeof order.amount === "number"
-        ? order.amount
-        : typeof order.totalPrice === "number"
-          ? order.totalPrice
-          : 0,
-    date:
-      order.date ||
-      order.createdAt ||
-      order.updatedAt ||
-      new Date().toISOString(),
-  });
+  const normalizeOrder = (order: any, index: number): CustomerOrder => {
+    const productName = order.items?.[0]?.product || "N/A";
+    const rawStatus = String(order.status || "pending").toLowerCase();
+    const normalizedStatus =
+      rawStatus === "completed" ? "delivered" : rawStatus;
+    return {
+      id: String(order.id || order._id || order.orderId || `order-${index}`),
+      customer: order.customerName || order.customer || "Unknown customer",
+      product: productName,
+      status: normalizedStatus,
+      amount:
+        typeof order.amount === "number"
+          ? order.amount
+          : typeof order.totalPrice === "number"
+            ? order.totalPrice
+            : 0,
+      date:
+        order.date ||
+        order.createdAt ||
+        order.updatedAt ||
+        new Date().toISOString(),
+      items: order.items,
+    };
+  };
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -77,7 +83,7 @@ export default function OrdersPage() {
       setError(null);
 
       try {
-        const ordersData = await fetchOrders();
+        const ordersData = await fetchOrders(searchQuery || undefined);
         const normalizedOrders = Array.isArray(ordersData)
           ? ordersData.map(normalizeOrder)
           : [];
@@ -93,24 +99,31 @@ export default function OrdersPage() {
       }
     };
 
-    loadOrders();
-  }, []);
+    const t = setTimeout(() => {
+      void loadOrders();
+    }, 200);
+
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   const filteredOrders = orders.filter((order) => {
     const query = searchQuery.toLowerCase();
     const matchesSearch =
       String(order.id).toLowerCase().includes(query) ||
-      String(order.customer).toLowerCase().includes(query);
-    const matchesStatus =
-      statusFilter === "all" || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
+      String(order.customer).toLowerCase().includes(query) ||
+      String(order.product).toLowerCase().includes(query);
+    return matchesSearch; // status filtering removed, keep all orders matching search
   });
 
   const orderStats = {
     total: orders.length,
-    delivered: orders.filter((o) => o.status === "delivered").length,
-    shipped: orders.filter((o) => o.status === "shipped").length,
-    pending: orders.filter((o) => o.status === "pending").length,
+    delivered: orders.filter(
+      (o) => String(o.status).toLowerCase() === "delivered",
+    ).length,
+    shipped: orders.filter((o) => String(o.status).toLowerCase() === "shipped")
+      .length,
+    pending: orders.filter((o) => String(o.status).toLowerCase() === "pending")
+      .length,
   };
 
   return (
@@ -191,20 +204,6 @@ export default function OrdersPage() {
                   className="w-full pl-9 sm:w-64"
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                {["all", "delivered", "shipped", "pending"].map((status) => (
-                  <Button
-                    key={status}
-                    variant={statusFilter === status ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setStatusFilter(status)}
-                    className="h-8 capitalize"
-                  >
-                    {status}
-                  </Button>
-                ))}
-              </div>
             </div>
           </div>
         </CardHeader>
@@ -227,6 +226,7 @@ export default function OrdersPage() {
                   <TableRow>
                     <TableHead>Order ID</TableHead>
                     <TableHead>Customer</TableHead>
+                    <TableHead>Product</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
@@ -251,6 +251,7 @@ export default function OrdersPage() {
                           {order.id}
                         </TableCell>
                         <TableCell>{order.customer}</TableCell>
+                        <TableCell>{order.product || "N/A"}</TableCell>
                         <TableCell>
                           {new Date(order.date).toLocaleDateString()}
                         </TableCell>

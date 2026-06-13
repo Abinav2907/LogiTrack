@@ -1,16 +1,8 @@
 "use client";
 
 import DashboardCard from "@/components/owner/DashboardCard";
-import DeliveryMap from "@/components/owner/DeliveryMap";
-import AgentCard from "@/components/owner/AgentCard";
-import {
-  DollarSign,
-  ShoppingCart,
-  Package,
-  ShieldCheck,
-  Sparkles,
-  ArrowUpRight,
-} from "lucide-react";
+// DeliveryMap removed per owner's request
+import { DollarSign, ShoppingCart, Package } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   fetchOwnerProducts,
@@ -114,7 +106,28 @@ export default function OwnerDashboard() {
         const businessOrders = await fetchOwnerOrders();
         const inventoryData = await fetchOwnerInventory();
         const analyticsData = await fetchAnalytics();
-        const deliveriesData = await fetchOwnerDeliveries();
+        // Fetch active deliveries (non-terminal) and completed/delivered deliveries
+        const activeDeliveries = await fetchOwnerDeliveries({ owner: true });
+        const completedList = await fetchOwnerDeliveries({
+          owner: true,
+          status: "completed",
+        });
+        const deliveredList = await fetchOwnerDeliveries({
+          owner: true,
+          status: "delivered",
+        });
+
+        // Merge lists and dedupe by id
+        const merged = [
+          ...(Array.isArray(activeDeliveries) ? activeDeliveries : []),
+          ...(Array.isArray(completedList) ? completedList : []),
+          ...(Array.isArray(deliveredList) ? deliveredList : []),
+        ];
+        const map = new Map();
+        merged.forEach((m: any) => {
+          if (m && m.id) map.set(m.id, m);
+        });
+        const deliveriesData = Array.from(map.values());
         const deliveryAgentsData = await fetchOwnerDeliveryAgents();
 
         setProducts(Array.isArray(products) ? products : []);
@@ -122,8 +135,9 @@ export default function OwnerDashboard() {
         setInventory(Array.isArray(inventoryData) ? inventoryData : []);
         setAnalytics(analyticsData ?? null);
         setDeliveries(Array.isArray(deliveriesData) ? deliveriesData : []);
-        setDeliveryAgents(Array.isArray(deliveryAgentsData) ? deliveryAgentsData : []);
-
+        setDeliveryAgents(
+          Array.isArray(deliveryAgentsData) ? deliveryAgentsData : [],
+        );
       } catch (err: any) {
         setError(err?.message ?? "Failed to load dashboard data");
       } finally {
@@ -136,14 +150,21 @@ export default function OwnerDashboard() {
 
   // Safe derived stats
   const totalProducts = products.length;
-  const totalOrders = analytics?.totalOrders ?? orders.length;
-  const revenue = analytics?.totalRevenue ?? 0;
+  // Always derive total orders directly from the orders array
+  const totalOrders = orders.length;
+  // Total revenue for owner dashboard: use sum of actual order totals (realised revenue)
+  const revenue =
+    orders && orders.length > 0
+      ? orders.reduce((sum, o) => sum + (Number(o.totalPrice) || 0), 0)
+      : (analytics?.totalRevenue ?? 0);
   const lowStockCount =
     analytics?.lowStockCount ??
     inventory.filter((p) => p.stock <= p.minStock).length;
   const activeDeliveries = deliveries.length;
-  const deliveredOrders = orders.filter(
-    (o) => (o.status ?? "").toLowerCase() === "delivered",
+  const deliveredOrders = orders.filter((o) =>
+    ["completed", "delivered"].includes(
+      ((o.status ?? "") as string).toLowerCase(),
+    ),
   ).length;
 
   // Recent orders: take first 4 (backend should ideally return newest first)
@@ -164,15 +185,44 @@ export default function OwnerDashboard() {
 
   // Agents derived from backend delivery agent list plus any delivery-assigned agents
   const uniqueAgents = useMemo(() => {
-    const map = new Map<string, DeliveryAgent>();
-    deliveryAgents.forEach((agent) => map.set(agent._id, agent));
+    const map = new Map<string, any>();
+    // start with explicit delivery agents
+    deliveryAgents.forEach((agent) => {
+      if (agent && agent._id) map.set(String(agent._id), agent);
+    });
+
+    // include agents referenced on deliveries (raw.assignedAgent or agent)
     deliveries.forEach((d) => {
-      if (d.agent && d.agent._id && !map.has(d.agent._id)) {
-        map.set(d.agent._id, d.agent);
+      const a = d.agent || d.raw?.assignedAgent;
+      if (!a) return;
+      const id = typeof a === "string" ? a : a._id || a.id;
+      if (!id) return;
+      if (map.has(String(id))) return;
+      if (typeof a === "object") {
+        map.set(String(id), a);
+      } else {
+        map.set(String(id), {
+          _id: String(id),
+          name: String(id),
+          contact: null,
+          isAvailable: false,
+        });
       }
     });
+
     return Array.from(map.values());
   }, [deliveryAgents, deliveries]);
+
+  // Helper to extract assigned agent id from a delivery record
+  const getAssignedAgentId = (d: any) => {
+    if (!d) return null;
+    if (d.agent && (d.agent._id || d.agent.id))
+      return String(d.agent._id || d.agent.id);
+    const a = d.raw?.assignedAgent;
+    if (!a) return null;
+    if (typeof a === "string") return String(a);
+    return String(a._id || a.id || a);
+  };
 
   // For UI parity: create delivery-related quick access values (keeps layout unchanged)
   const driversOnline = uniqueAgents.length;
@@ -190,24 +240,7 @@ export default function OwnerDashboard() {
               logistics operations running smoothly with actionable insights.
             </p>
           </div>
-          <div className="rounded-3xl border border-[#1F1F1F] bg-[#111111] p-5 shadow-lg shadow-black/10">
-            <p className="text-sm uppercase tracking-[0.2em] text-neutral-500">
-              Live performance
-            </p>
-            <div className="mt-4 flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-linear-to-br from-emerald-500/20 to-cyan-500/10 text-emerald-300">
-                <Sparkles size={28} />
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-white">
-                  {activeDeliveries}
-                </p>
-                <p className="text-sm text-neutral-400">
-                  deliveries tracked this week
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* Live performance removed per request */}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
@@ -232,189 +265,84 @@ export default function OwnerDashboard() {
             icon={<Package size={24} />}
           />
 
-          <DashboardCard
-            title="On-time Rate"
-            value={`${analytics ? Math.max(0, Math.round(((analytics.last30Revenue - analytics.prev30Revenue) / Math.max(1, analytics.prev30Revenue)) * 100)) : 92}%`}
-            change="+3.8%"
-            icon={<ShieldCheck size={24} />}
-          />
+          {/* On-time Rate removed — showing agent-focused details below */}
         </div>
       </section>
-
-      <section className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
+      <section className="grid gap-6 xl:grid-cols-1">
         <div className="rounded-3xl border border-[#1F1F1F] bg-[#111111] p-6 shadow-lg shadow-black/10">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.2em] text-neutral-500">
-                Today's priorities
+                Fleet & Agents
               </p>
               <h2 className="mt-3 text-3xl font-bold text-white">
-                Better routing, faster deliveries
+                Agents Overview
               </h2>
               <p className="text-neutral-400 mt-2 max-w-2xl">
-                Review the latest route updates and team performance to reduce
-                delays across the fleet.
+                Key driver metrics and assignment counts.
               </p>
             </div>
-
-            <button className="inline-flex items-center gap-2 rounded-3xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700">
-              Review route plans
-              <ArrowUpRight size={16} />
-            </button>
-          </div>
-
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <div className="rounded-3xl border border-neutral-800 bg-[#0B0B0B] p-5">
-              <p className="text-sm text-neutral-400">Average ETA</p>
-              <p className="mt-3 text-3xl font-semibold text-white">28m</p>
-              <p className="mt-2 text-sm text-neutral-500">
-                Across active routes
+            <div className="text-right">
+              <p className="text-sm text-neutral-400">Total agents</p>
+              <p className="text-2xl font-bold text-white mt-1">
+                {uniqueAgents.length}
               </p>
-            </div>
-            <div className="rounded-3xl border border-neutral-800 bg-[#0B0B0B] p-5">
-              <p className="text-sm text-neutral-400">Fleet efficiency</p>
-              <p className="mt-3 text-3xl font-semibold text-white">94%</p>
-              <p className="mt-2 text-sm text-neutral-500">
-                Optimised route performance
-              </p>
-            </div>
-            <div className="rounded-3xl border border-neutral-800 bg-[#0B0B0B] p-5">
-              <p className="text-sm text-neutral-400">Alerts resolved</p>
-              <p className="mt-3 text-3xl font-semibold text-white">18</p>
-              <p className="mt-2 text-sm text-neutral-500">
-                In the last 24 hours
-              </p>
+              <p className="text-sm text-neutral-500">{driversOnline} online</p>
             </div>
           </div>
-        </div>
-
-        <div className="rounded-3xl border border-[#1F1F1F] bg-[#111111] p-6 shadow-lg shadow-black/10">
-          <h2 className="text-2xl font-bold text-white">Quick Actions</h2>
-          <p className="text-neutral-400 mt-2">
-            One-click commands to keep your operations moving.
-          </p>
 
           <div className="mt-6 space-y-4">
-            {[
-              {
-                title: "Dispatch new route",
-                description: "Create a route and assign a driver in seconds.",
-              },
-              {
-                title: "Notify active drivers",
-                description:
-                  "Send instant updates to every driver on the road.",
-              },
-              {
-                title: "Inventory sweep",
-                description: "Review low-stock items across warehouses.",
-              },
-            ].map((item) => (
-              <button
-                key={item.title}
-                type="button"
-                className="w-full rounded-3xl border border-neutral-800 bg-[#0B0B0B] px-5 py-4 text-left transition hover:border-red-600"
-              >
-                <p className="font-semibold text-white">{item.title}</p>
-                <p className="text-sm text-neutral-500 mt-1">
-                  {item.description}
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[2fr_1fr]">
-        <DeliveryMap agents={uniqueAgents} />
-
-        <div className="space-y-6">
-          <div className="rounded-3xl border border-[#1F1F1F] bg-[#111111] p-6 shadow-lg shadow-black/10">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-bold text-white">Active Fleet</h2>
-                <p className="text-neutral-500 mt-2">
-                  Current route statuses and driver performance.
-                </p>
-              </div>
-              <span className="rounded-2xl bg-emerald-500/15 px-3 py-2 text-sm text-emerald-300">
-                {driversOnline} drivers online
-              </span>
-            </div>
-
-            <div className="mt-6 space-y-4">
-              {uniqueAgents.length > 0 ? (
-                uniqueAgents.map((agent) => {
-                  const agentDeliveries = deliveries.filter(
-                    (d) => d.agent?._id === agent._id,
-                  ).length;
-                  const agentStatus = agent.isAvailable
-                    ? "Available"
-                    : "Active";
+            {uniqueAgents.length > 0 ? (
+              uniqueAgents.map((agent) => {
+                // Assigned: deliveries currently assigned to this agent and not completed/failed
+                const assignedCount = deliveries.filter((d) => {
+                  const id = getAssignedAgentId(d);
+                  const status = (d.status || "").toLowerCase();
                   return (
-                    <div
-                      key={agent._id}
-                      className="flex items-center justify-between rounded-3xl border border-neutral-800 bg-[#0B0B0B] px-4 py-4"
-                    >
-                      <div>
-                        <p className="font-semibold text-white">{agent.name}</p>
-                        <p className="text-sm text-neutral-500 mt-1">
-                          {agentDeliveries} deliveries assigned
-                        </p>
-                      </div>
-                      <span
-                        className={`rounded-2xl px-3 py-2 text-sm font-medium ${agentStatus === "Active" ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}
-                      >
-                        {agentStatus}
-                      </span>
-                    </div>
+                    id === String(agent._id) &&
+                    !["completed", "delivered", "failed"].includes(status)
                   );
-                })
-              ) : (
-                <div className="col-span-full rounded-3xl border border-[#1F1F1F] p-8 text-gray-400">
-                  No drivers online
-                </div>
-              )}
-            </div>
-          </div>
+                }).length;
 
-          <div className="rounded-3xl border border-[#1F1F1F] bg-[#111111] p-6 shadow-lg shadow-black/10">
-            <h2 className="text-2xl font-bold text-white">Shipment Pulse</h2>
-            <p className="text-neutral-500 mt-2">
-              Recent operational updates for your logistics network.
-            </p>
-
-            <div className="mt-6 space-y-4">
-              {/* Use recent orders to populate pulse (keeps visual structure identical) */}
-              {recentOrders.length > 0 ? (
-                recentOrders.map((o) => (
+                // Completed: deliveries completed/delivered by this agent
+                const completedCount = deliveries.filter((d) => {
+                  const id = getAssignedAgentId(d);
+                  const status = (d.status || "").toLowerCase();
+                  return (
+                    id === String(agent._id) &&
+                    ["completed", "delivered"].includes(status)
+                  );
+                }).length;
+                return (
                   <div
-                    key={o._id}
-                    className="rounded-3xl border border-neutral-800 bg-[#0B0B0B] p-4"
+                    key={agent._id}
+                    className="rounded-3xl border border-neutral-800 bg-[#0B0B0B] p-4 flex items-center justify-between"
                   >
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-white font-semibold">{o.orderId}</p>
-                        <p className="text-sm text-neutral-500 mt-1">
-                          {o.customerName} · ₹
-                          {Number(o.totalPrice).toLocaleString()}
-                        </p>
-                      </div>
-                      <span className="rounded-full bg-[#7F1D1D]/20 px-3 py-1 text-xs text-red-300">
-                        {o.status}
-                      </span>
+                    <div>
+                      <p className="font-semibold text-white">{agent.name}</p>
+                      <p className="text-sm text-neutral-500 mt-1">
+                        {agent.contact || agent.email || "—"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-neutral-400">Assigned</p>
+                      <p className="font-bold text-white">{assignedCount}</p>
+                      <p className="text-sm text-neutral-400">Completed</p>
+                      <p className="font-bold text-white">{completedCount}</p>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="text-gray-400 text-center py-6">
-                  No recent orders
-                </div>
-              )}
-            </div>
+                );
+              })
+            ) : (
+              <div className="text-gray-400 text-center py-6">
+                No agents found
+              </div>
+            )}
           </div>
         </div>
       </section>
+
+      {/* Active Fleet and Shipment Pulse removed per request */}
 
       <section className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2 rounded-3xl border border-neutral-900 bg-[#111111] p-6 shadow-lg shadow-black/10">

@@ -1,6 +1,8 @@
 const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
-const authenticateToken = (req, res, next) => {
+// Attach full user object (without password) to req.user
+const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1];
@@ -11,15 +13,22 @@ const authenticateToken = (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = decoded;
+    // decoded should contain { id: user._id } per authController
+    const userId = decoded?.id || decoded?._id || decoded?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Invalid token payload" });
+    }
+
+    const user = await User.findById(userId).select("-password");
+    if (!user) return res.status(401).json({ message: "User not found" });
+
+    req.user = user;
 
     next();
   } catch (error) {
+    console.error("authenticateToken error:", error.message);
     return res.status(403).json({
       message: "Invalid token",
     });

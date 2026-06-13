@@ -37,7 +37,10 @@ interface DeliveryAgent {
 
 interface Delivery {
   _id: string;
-  order: Order;
+  order?: Order;
+  // some endpoints return flattened records with top-level orderId/customer fields
+  orderId?: string;
+  customer?: string;
   agent?: DeliveryAgent;
   status: "pending" | "assigned" | "in_transit" | "delivered" | "failed";
   tracking: Tracking[];
@@ -72,31 +75,45 @@ export default function DeliveryTable({ deliveries }: DeliveryTableProps) {
 
       <div className="space-y-4">
         {deliveries.length > 0 ? (
-          deliveries.map((delivery) => (
-            <div
-              key={delivery._id}
-              className="flex items-center justify-between p-4 rounded-2xl bg-[#0B0B0B] border border-[#1F1F1F]"
-            >
-              <div>
-                <h3 className="text-white font-semibold">
-                  {delivery.order.orderId}
-                </h3>
-                <p className="text-gray-400 text-sm">
-                  {delivery.order.customerName}
-                </p>
-              </div>
+          deliveries.map((delivery) => {
+            const orderObj = delivery.order ?? {
+              orderId: delivery.orderId ?? delivery.id ?? "",
+              customerName: delivery.customer ?? "",
+            };
+            return (
+              <div
+                key={String(
+                  delivery._id ??
+                    delivery.id ??
+                    orderObj.orderId ??
+                    `${Math.random()}`,
+                )}
+                className="flex items-center justify-between p-4 rounded-2xl bg-[#0B0B0B] border border-[#1F1F1F]"
+              >
+                <div>
+                  <h3 className="text-white font-semibold">
+                    {orderObj.orderId}
+                  </h3>
+                  <p className="text-gray-400 text-sm">
+                    {orderObj.customerName}
+                  </p>
+                </div>
 
-              <div className="text-gray-300">
-                {delivery.agent?.name || "Unassigned"}
-              </div>
+                <div className="text-gray-300">
+                  {delivery.agent?.name || "Unassigned"}
+                </div>
 
-              <div className={`text-sm capitalize ${getStatusColor(delivery.status)}`}>
-                {delivery.status === "in_transit"
-                  ? "In Transit"
-                  : delivery.status.charAt(0).toUpperCase() + delivery.status.slice(1)}
+                <div
+                  className={`text-sm capitalize ${getStatusColor(delivery.status)}`}
+                >
+                  {delivery.status === "in_transit"
+                    ? "In Transit"
+                    : delivery.status.charAt(0).toUpperCase() +
+                      delivery.status.slice(1)}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="text-gray-400 text-center py-8">
             No deliveries available

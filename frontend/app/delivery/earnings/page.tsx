@@ -91,28 +91,23 @@ export default function EarningsPage() {
                   {earnings.highlights.length} live earnings metrics are
                   currently sourced from the backend.
                 </p>
-                <p className="text-sm text-[#D5D5D5] mt-3">
-                  {earnings.incentives.length > 0
-                    ? `${earnings.incentives.length} incentives are available from the latest backend state.`
-                    : "No bonus incentives are available right now."}
-                </p>
+                {earnings.incentives && earnings.incentives.length > 0 && (
+                  <p className="text-sm text-[#D5D5D5] mt-3">
+                    {`${earnings.incentives.length} incentives are available from the latest backend state.`}
+                  </p>
+                )}
               </div>
             </div>
 
-            <div className="bg-[#1A1A1A] rounded-2xl border border-[#27272A] p-5">
-              <p className="text-sm text-[#A1A1AA]">Incentives</p>
-              <h2 className="text-xl font-semibold text-white mt-1">
-                Bonus tracker
-              </h2>
+            {earnings.incentives && earnings.incentives.length > 0 && (
+              <div className="bg-[#1A1A1A] rounded-2xl border border-[#27272A] p-5">
+                <p className="text-sm text-[#A1A1AA]">Incentives</p>
+                <h2 className="text-xl font-semibold text-white mt-1">
+                  Bonus tracker
+                </h2>
 
-              <div className="mt-5 space-y-3">
-                {earnings.incentives.length === 0 ? (
-                  <div className="rounded-xl border border-[#27272A] bg-[#111111] px-4 py-3 text-sm text-[#D5D5D5]">
-                    No bonus incentives are currently available from the
-                    backend.
-                  </div>
-                ) : (
-                  earnings.incentives.map((item) => (
+                <div className="mt-5 space-y-3">
+                  {earnings.incentives.map((item) => (
                     <div
                       key={item.label}
                       className="flex items-center justify-between rounded-xl border border-[#27272A] bg-[#111111] px-4 py-3"
@@ -124,9 +119,44 @@ export default function EarningsPage() {
                         {item.amount}
                       </span>
                     </div>
-                  ))
-                )}
+                  ))}
+                </div>
               </div>
+            )}
+          </div>
+
+          {/* Bottom summary */}
+          <div className="mt-8 grid grid-cols-1 gap-4">
+            <div className="rounded-2xl border border-[#27272A] bg-[#111111] p-4 text-sm text-[#D5D5D5]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-[#A1A1AA]">Orders completed</p>
+                  <p className="text-lg font-semibold text-white">
+                    {earnings.orders}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#A1A1AA]">Bonus</p>
+                  <p className="text-lg font-semibold text-white">
+                    ₹{earnings.bonus || 0}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-[#A1A1AA]">Total (with bonus)</p>
+                  <p className="text-lg font-semibold text-white">
+                    ₹{earnings.totalWithBonus ?? earnings.earned}
+                  </p>
+                </div>
+              </div>
+              {earnings.meta && (
+                <p className="mt-3 text-xs text-[#9CA3AF]">
+                  Rates: ₹{earnings.meta.perOrderBase} per order, ₹
+                  {earnings.meta.perOrderPremium} for orders &gt; ₹
+                  {earnings.meta.premiumThreshold}. Bonus: ₹
+                  {earnings.meta.bonusPerStep} for every ₹
+                  {earnings.meta.bonusStep} earned.
+                </p>
+              )}
             </div>
           </div>
         </>

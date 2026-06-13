@@ -45,10 +45,10 @@ export default function HistoryPage() {
   }, []);
 
   const completedCount = history.filter(
-    (item) => item.status === "Delivered",
+    (item) => item.status === "completed" || item.status === "delivered",
   ).length;
   const returnCount = history.filter(
-    (item) => item.status === "Returned",
+    (item) => item.status === "returned",
   ).length;
 
   return (
@@ -103,6 +103,7 @@ export default function HistoryPage() {
                   <th className="text-left p-4 text-[#A1A1AA]">Delivery ID</th>
                   <th className="text-left p-4 text-[#A1A1AA]">Customer</th>
                   <th className="text-left p-4 text-[#A1A1AA]">City</th>
+                  <th className="text-left p-4 text-[#A1A1AA]">ETA</th>
                   <th className="text-left p-4 text-[#A1A1AA]">Status</th>
                   <th className="text-left p-4 text-[#A1A1AA]">Last sync</th>
                 </tr>
@@ -114,6 +115,9 @@ export default function HistoryPage() {
                     <td className="p-4 text-white">{delivery.id}</td>
                     <td className="p-4 text-white">{delivery.customer}</td>
                     <td className="p-4 text-[#D5D5D5]">{delivery.city}</td>
+                    <td className="p-4 text-[#D5D5D5]">
+                      {delivery.eta || "--"}
+                    </td>
                     <td className="p-4">
                       <StatusBadge status={delivery.status} />
                     </td>

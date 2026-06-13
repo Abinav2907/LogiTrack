@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/lib/mock-data";
 import { fetchProducts, API_BASE_URL } from "@/lib/api";
-import { Search, Filter, Heart } from "lucide-react";
+import { Search, Filter, Heart, MapPin } from "lucide-react";
 
 type NormalizedProduct = Product;
 
@@ -18,16 +18,40 @@ type OrderMessage = {
   text: string;
 };
 
-const categories = ["All", "Audio", "Accessories", "Wearables", "Storage"];
+type DeliveryAddress = {
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+};
+
+// Removed category filtering - users should use search only
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<NormalizedProduct[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orderMessage, setOrderMessage] = useState<OrderMessage | null>(null);
-  const [orderingProductId, setOrderingProductId] = useState<string | null>(null);
+  const [orderingProductId, setOrderingProductId] = useState<string | null>(
+    null,
+  );
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [selectedProduct, setSelectedProduct] =
+    useState<NormalizedProduct | null>(null);
+  const [deliveryAddress, setDeliveryAddress] = useState<DeliveryAddress>({
+    street: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "",
+    latitude: 0,
+    longitude: 0,
+  });
   const router = useRouter();
 
   const normalizeProduct = (
@@ -47,14 +71,95 @@ export default function ProductsPage() {
     category: product.category || "General",
   });
 
+  const handleAddressChange = (field: keyof DeliveryAddress, value: any) => {
+    setDeliveryAddress((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setOrderMessage({
+        type: "error",
+        text: "Geolocation is not supported in your browser.",
+      });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        setDeliveryAddress((prev) => ({
+          ...prev,
+          latitude: lat,
+          longitude: lon,
+        }));
+
+        // Try reverse-geocoding via Nominatim to fill address fields
+        try {
+          const resp = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
+            {
+              headers: { "User-Agent": "LogiTrack/1.0 (contact@example.com)" },
+            },
+          );
+          if (resp.ok) {
+            const data = await resp.json();
+            const address = data.address || {};
+            setDeliveryAddress((prev) => ({
+              ...prev,
+              street:
+                (address.road
+                  ? `${address.road}${address.house_number ? " " + address.house_number : ""}`
+                  : prev.street) || prev.street,
+              city:
+                address.city || address.town || address.village || prev.city,
+              state: address.state || prev.state,
+              postalCode: address.postcode || prev.postalCode,
+              country: address.country || prev.country,
+              latitude: lat,
+              longitude: lon,
+            }));
+            setOrderMessage({
+              type: "success",
+              text: "Location resolved and filled into address form.",
+            });
+          } else {
+            setOrderMessage({
+              type: "success",
+              text: "Coordinates captured. Please fill the address fields.",
+            });
+          }
+        } catch (err) {
+          setOrderMessage({
+            type: "success",
+            text: "Coordinates captured. Please fill the address fields.",
+          });
+        }
+      },
+      (error) => {
+        setOrderMessage({
+          type: "error",
+          text: `Unable to get location: ${error.message}`,
+        });
+      },
+    );
+  };
+
   const handleOrderNow = async (product: NormalizedProduct) => {
+    setSelectedProduct(product);
+    setShowAddressForm(true);
     setOrderMessage(null);
-    setOrderingProductId(product.id);
+  };
+
+  const submitOrder = async () => {
+    setOrderMessage(null);
+    setOrderingProductId(selectedProduct?.id || null);
 
     const userId =
-      typeof window !== "undefined"
-        ? localStorage.getItem("userId")
-        : null;
+      typeof window !== "undefined" ? localStorage.getItem("userId") : null;
 
     if (!userId) {
       setOrderMessage({
@@ -65,19 +170,41 @@ export default function ProductsPage() {
       return;
     }
 
+    if (
+      !deliveryAddress.street ||
+      !deliveryAddress.city ||
+      !deliveryAddress.country
+    ) {
+      setOrderMessage({
+        type: "error",
+        text: "Please fill in all required address fields.",
+      });
+      setOrderingProductId(null);
+      return;
+    }
+
+    if (!selectedProduct) return;
+
     const orderPayload = {
       userId,
       items: [
         {
-          productId: product.id,
+          productId: selectedProduct.id,
           quantity: 1,
         },
       ],
+      deliveryAddress,
     };
 
     console.log("=== FRONTEND: PLACING ORDER ===");
-    console.log("Product selected:", product.id, "Name:", product.name);
+    console.log(
+      "Product selected:",
+      selectedProduct.id,
+      "Name:",
+      selectedProduct.name,
+    );
     console.log("Customer (userId):", userId);
+    console.log("Delivery Address:", deliveryAddress);
     console.log("Sending payload:", JSON.stringify(orderPayload));
 
     try {
@@ -106,11 +233,25 @@ export default function ProductsPage() {
         text: "Order placed successfully. Redirecting...",
       });
 
+      setShowAddressForm(false);
+      setDeliveryAddress({
+        street: "",
+        city: "",
+        state: "",
+        postalCode: "",
+        country: "",
+        latitude: 0,
+        longitude: 0,
+      });
+
       setTimeout(() => {
         router.push("/customer/orders");
       }, 800);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to place order. Please try again.";
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to place order. Please try again.";
       console.error("Order error:", errorMessage);
       setOrderMessage({
         type: "error",
@@ -146,14 +287,9 @@ export default function ProductsPage() {
     loadProducts();
   }, []);
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "All" || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   return (
     <div className="space-y-6">
@@ -175,38 +311,107 @@ export default function ProductsPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <div className="flex flex-wrap gap-2">
-            {categories.map((category) => (
-              <Button
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(category)}
-                className="h-8"
-              >
-                {category}
-              </Button>
-            ))}
-          </div>
+          {/* Category filter removed - use search only */}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {orderMessage && (
-        <div className="col-span-full text-sm">
-          <p
-            className={
-              orderMessage.type === "success"
-                ? "text-emerald-300"
-                : "text-red-300"
-            }
-          >
-            {orderMessage.text}
-          </p>
-        </div>
+      {/* Address Form Modal */}
+      {showAddressForm && selectedProduct && (
+        <Card className="border border-amber-500/50 bg-amber-500/5 shadow-lg">
+          <CardContent className="p-6 space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Delivery Address for {selectedProduct.name}
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <input
+                type="text"
+                placeholder="Street Address *"
+                value={deliveryAddress.street}
+                onChange={(e) => handleAddressChange("street", e.target.value)}
+                className="px-3 py-2 border border-muted-foreground/30 rounded-lg bg-background text-foreground placeholder-muted-foreground"
+              />
+              <input
+                type="text"
+                placeholder="City *"
+                value={deliveryAddress.city}
+                onChange={(e) => handleAddressChange("city", e.target.value)}
+                className="px-3 py-2 border border-muted-foreground/30 rounded-lg bg-background text-foreground placeholder-muted-foreground"
+              />
+              <input
+                type="text"
+                placeholder="State"
+                value={deliveryAddress.state}
+                onChange={(e) => handleAddressChange("state", e.target.value)}
+                className="px-3 py-2 border border-muted-foreground/30 rounded-lg bg-background text-foreground placeholder-muted-foreground"
+              />
+              <input
+                type="text"
+                placeholder="Postal Code"
+                value={deliveryAddress.postalCode}
+                onChange={(e) =>
+                  handleAddressChange("postalCode", e.target.value)
+                }
+                className="px-3 py-2 border border-muted-foreground/30 rounded-lg bg-background text-foreground placeholder-muted-foreground"
+              />
+              <input
+                type="text"
+                placeholder="Country *"
+                value={deliveryAddress.country}
+                onChange={(e) => handleAddressChange("country", e.target.value)}
+                className="px-3 py-2 border border-muted-foreground/30 rounded-lg bg-background text-foreground placeholder-muted-foreground"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={useCurrentLocation}
+                className="col-span-full sm:col-span-1"
+              >
+                Use Current Location
+              </Button>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAddressForm(false);
+                  setSelectedProduct(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={submitOrder}
+                disabled={orderingProductId === selectedProduct.id}
+              >
+                {orderingProductId === selectedProduct.id
+                  ? "Placing Order..."
+                  : "Place Order"}
+              </Button>
+            </div>
+
+            {orderMessage && (
+              <p
+                className={
+                  orderMessage.type === "success"
+                    ? "text-emerald-300 text-sm"
+                    : "text-red-300 text-sm"
+                }
+              >
+                {orderMessage.text}
+              </p>
+            )}
+          </CardContent>
+        </Card>
       )}
-      {loading ? (
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {loading ? (
           <div className="col-span-full flex items-center justify-center py-16">
             <p className="text-sm text-muted-foreground">Loading products...</p>
           </div>
@@ -257,9 +462,11 @@ export default function ProductsPage() {
                       variant="destructive"
                       className="gap-2"
                       onClick={() => handleOrderNow(product)}
-                      disabled={orderingProductId === product.id}
+                      disabled={
+                        showAddressForm && selectedProduct?.id === product.id
+                      }
                     >
-                      {orderingProductId === product.id ? "Ordering..." : "Order Now"}
+                      Order Now
                     </Button>
                   </div>
                 </div>

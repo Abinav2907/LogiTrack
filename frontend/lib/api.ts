@@ -13,15 +13,26 @@ export interface DashboardData {
 }
 
 export interface EarningsResponse {
+  earned: number;
+  orders: number;
+  bonus?: number;
+  totalWithBonus?: number;
   highlights: Array<{
     title: string;
     value: string;
-    description: string;
+    description?: string;
   }>;
   incentives: Array<{
     label: string;
     amount: string;
   }>;
+  meta?: {
+    perOrderBase?: number;
+    perOrderPremium?: number;
+    premiumThreshold?: number;
+    bonusThreshold?: number;
+    bonusAmount?: number;
+  };
 }
 
 export interface LocationUpdatePayload {
@@ -81,8 +92,11 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
    Existing APIs
 ========================= */
 
-export async function fetchOrders(): Promise<any[]> {
-  return apiRequest<any[]>("/api/customer/orders");
+export async function fetchOrders(search?: string): Promise<any[]> {
+  const path = search
+    ? `/api/customer/orders?search=${encodeURIComponent(search)}`
+    : "/api/customer/orders";
+  return apiRequest<any[]>(path);
 }
 
 export async function fetchProducts(): Promise<any[]> {
@@ -177,8 +191,25 @@ export async function fetchOwnerOrders(): Promise<any[]> {
   return apiRequest<any[]>("/api/orders/business");
 }
 
-export async function fetchOwnerDeliveries(): Promise<any> {
-  return apiRequest<any>("/api/deliveries");
+export async function fetchOwnerDeliveries(params?: {
+  owner?: boolean;
+  status?: string;
+  mine?: boolean;
+}): Promise<any> {
+  let path = "/api/deliveries";
+  const qs: string[] = [];
+  if (params?.owner) qs.push("owner=true");
+  if (params?.status) qs.push(`status=${encodeURIComponent(params.status)}`);
+  if (params?.mine) qs.push("mine=true");
+  if (qs.length) path += `?${qs.join("&")}`;
+  return apiRequest<any>(path);
+}
+
+export async function assignOrderToAgent(orderId: string, agentId: string) {
+  return apiRequest<any>(`/api/deliveries/orders/${orderId}/assign`, {
+    method: "POST",
+    body: JSON.stringify({ agentId }),
+  });
 }
 
 export async function fetchOwnerDeliveryAgents(): Promise<any> {
@@ -201,7 +232,19 @@ export async function fetchDashboard(): Promise<DashboardData> {
 }
 
 export async function fetchDeliveries(): Promise<DeliveryRecord[]> {
-  return apiRequest<DeliveryRecord[]>("/api/deliveries");
+  // Fetch only deliveries assigned to the logged-in agent
+  return apiRequest<DeliveryRecord[]>("/api/deliveries?mine=true");
+}
+
+export async function acceptDelivery(
+  orderOrDeliveryId: string,
+): Promise<DeliveryRecord> {
+  return apiRequest<DeliveryRecord>(
+    `/api/deliveries/orders/${orderOrDeliveryId}/accept`,
+    {
+      method: "POST",
+    },
+  );
 }
 
 export async function fetchHistory(): Promise<DeliveryRecord[]> {
@@ -215,10 +258,11 @@ export async function fetchEarnings(): Promise<EarningsResponse> {
 export async function updateDeliveryStatus(
   id: string,
   status: string,
+  completionPhoto?: string,
 ): Promise<DeliveryRecord> {
   return apiRequest<DeliveryRecord>(`/api/deliveries/${id}/status`, {
     method: "PATCH",
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, completionPhoto }),
   });
 }
 

@@ -1,17 +1,23 @@
-const express = require("express")
-const router = express.Router()
+const express = require("express");
+
+const router = express.Router();
+const authenticateToken = require("../middleware/authenticateToken");
 const {
   getAllOrders,
   getOrderById,
   createOrder,
   updateOrder,
   deleteOrder,
-} = require("../controllers/customerOrderController")
+} = require("../controllers/customerOrderController");
 
-router.get("/", getAllOrders)
-router.get("/:id", getOrderById)
-router.post("/", createOrder)
-router.put("/:id", updateOrder)
-router.delete("/:id", deleteOrder)
+// Require authentication for all customer order routes so we can return only the
+// orders belonging to the authenticated customer.
+router.use(authenticateToken);
 
-module.exports = router
+router.get("/", getAllOrders);
+router.get("/:id", getOrderById);
+router.post("/", createOrder);
+router.put("/:id", updateOrder);
+router.delete("/:id", deleteOrder);
+
+module.exports = router;

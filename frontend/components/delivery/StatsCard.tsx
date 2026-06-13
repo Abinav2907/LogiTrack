@@ -26,24 +26,24 @@ const StatsCard = ({ title, value, description, trend }: Props) => {
           <h2 className="text-3xl font-bold text-white mt-3">{value}</h2>
         </div>
 
-        <div
-          className="
-            w-14
-            h-14
-            rounded-2xl
-            bg-[#7F1D1D]/20
-            border
-            border-[#7F1D1D]
-            flex
-            items-center
-            justify-center
-            text-[#DC2626]
-          "
-        >
-          {trend ? (
+        {trend ? (
+          <div
+            className="
+              w-14
+              h-14
+              rounded-2xl
+              bg-[#7F1D1D]/20
+              border
+              border-[#7F1D1D]
+              flex
+              items-center
+              justify-center
+              text-[#DC2626]
+            "
+          >
             <span className="text-sm font-semibold">{trend}</span>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       {/* BOTTOM */}

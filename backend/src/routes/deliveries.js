@@ -1,5 +1,5 @@
-const express = require('express');
-const authenticateToken = require('../middleware/authenticateToken');
+const express = require("express");
+const authenticateToken = require("../middleware/authenticateToken");
 const {
   getAllDeliveries,
   getActiveDeliveries,
@@ -10,33 +10,42 @@ const {
   createDelivery,
   updateDelivery,
   deleteDelivery,
-} = require('../controllers/deliveryController.js');
+  acceptOrder,
+  assignOrder,
+  getDeliveries,
+} = require("../controllers/deliveryController.js");
 
 const router = express.Router();
 router.use(authenticateToken);
 
 // Dashboard
-router.get('/dashboard', getDashboard);
+router.get("/dashboard", getDashboard);
 
 // Earnings
-router.get('/earnings', getEarnings);
+router.get("/earnings", getEarnings);
 
 // History
-router.get('/history', getHistoryDeliveries);
+router.get("/history", getHistoryDeliveries);
 
 // All deliveries
-router.get('/', getAllDeliveries);
+router.get("/", getAllDeliveries);
+
+// Accept order as delivery agent
+router.post("/orders/:orderId/accept", acceptOrder);
+
+// Owner assigns an agent to an order
+router.post("/orders/:orderId/assign", assignOrder);
 
 // Create delivery
-router.post('/', createDelivery);
+router.post("/", createDelivery);
 
 // Update whole delivery (PUT)
-router.put('/:id', updateDelivery);
+router.put("/:id", updateDelivery);
 
 // Delete delivery
-router.delete('/:id', deleteDelivery);
+router.delete("/:id", deleteDelivery);
 
 // Update delivery status
-router.patch('/:id/status', updateDeliveryStatus);
+router.patch("/:id/status", updateDeliveryStatus);
 
 module.exports = router;

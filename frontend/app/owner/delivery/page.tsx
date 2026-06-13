@@ -69,10 +69,25 @@ export default function DeliveryPage() {
       setError(null);
 
       try {
-        const [deliveriesData, agentsData] = await Promise.all([
-          fetchOwnerDeliveries(),
-          fetchOwnerDeliveryAgents(),
-        ]);
+        // Fetch active, completed and delivered deliveries for owner
+        const [activeDeliveries, completedList, deliveredList, agentsData] =
+          await Promise.all([
+            fetchOwnerDeliveries({ owner: true }),
+            fetchOwnerDeliveries({ owner: true, status: "completed" }),
+            fetchOwnerDeliveries({ owner: true, status: "delivered" }),
+            fetchOwnerDeliveryAgents(),
+          ]);
+
+        const merged = [
+          ...(Array.isArray(activeDeliveries) ? activeDeliveries : []),
+          ...(Array.isArray(completedList) ? completedList : []),
+          ...(Array.isArray(deliveredList) ? deliveredList : []),
+        ];
+        const map = new Map();
+        merged.forEach((m: any) => {
+          if (m && m.id) map.set(m.id, m);
+        });
+        const deliveriesData = Array.from(map.values());
 
         setDeliveries(Array.isArray(deliveriesData) ? deliveriesData : []);
         setDeliveryAgents(Array.isArray(agentsData) ? agentsData : []);
@@ -99,16 +114,24 @@ export default function DeliveryPage() {
         .map((d) => [d.agent!._id, d.agent!] as [string, DeliveryAgent]),
     ]).values(),
   );
-  const activeAgents = uniqueAgents.filter(
-    (agent) => !agent.isAvailable,
-  ).length;
+  // Active agents: number of known agents
+  const activeAgents = uniqueAgents.length;
 
+  // Pending orders: any non-terminal status
+  const terminalStatuses = [
+    "completed",
+    "delivered",
+    "failed",
+    "returned",
+    "cancelled",
+  ];
   const pendingOrders = deliveries.filter(
-    (d) => d.status === "pending" || d.status === "assigned",
+    (d) => !terminalStatuses.includes((d.status || "").toLowerCase()),
   ).length;
 
-  const deliveredCount = deliveries.filter(
-    (d) => d.status === "delivered",
+  // Delivered includes 'completed' and 'delivered'
+  const deliveredCount = deliveries.filter((d) =>
+    ["completed", "delivered"].includes((d.status || "").toLowerCase()),
   ).length;
   const successRate =
     deliveries.length > 0
@@ -198,9 +221,13 @@ export default function DeliveryPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {uniqueAgents.length > 0 ? (
             uniqueAgents.map((agent) => {
-              const agentDeliveries = deliveries.filter(
-                (d) => d.agent?._id === agent._id,
-              ).length;
+              const agentDeliveries = deliveries.filter((d) => {
+                const id =
+                  d.agent && (d.agent._id || d.agent.id)
+                    ? String(d.agent._id || d.agent.id)
+                    : null;
+                return id === String(agent._id);
+              }).length;
               const agentStatus = agent.isAvailable ? "Available" : "Active";
 
               return (

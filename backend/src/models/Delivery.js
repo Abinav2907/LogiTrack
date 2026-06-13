@@ -1,38 +1,44 @@
 const mongoose = require("mongoose");
 
+const TrackingEntrySchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    message: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: true },
+);
+
 const deliverySchema = new mongoose.Schema(
   {
-    id: {
-      type: String,
+    order: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
       required: true,
       unique: true,
-      trim: true,
     },
-    customer: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    address: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    city: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    eta: {
-      type: String,
-      required: true,
-      trim: true,
+    assignedAgent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
     status: {
       type: String,
       required: true,
       enum: [
         "Pending",
+        "Assigned",
         "Out for Delivery",
         "Delivered",
         "Failed Attempt",
@@ -40,21 +46,18 @@ const deliverySchema = new mongoose.Schema(
       ],
       default: "Pending",
     },
+    tracking: {
+      type: [TrackingEntrySchema],
+      default: [],
+    },
+    estimatedDelivery: {
+      type: Date,
+    },
     priority: {
       type: String,
-      required: true,
+      required: false,
       enum: ["Low", "Medium", "High", "Urgent"],
       default: "Medium",
-    },
-    contact: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    location: {
-      type: String,
-      required: true,
-      trim: true,
     },
     lastUpdated: {
       type: String,
