@@ -2,10 +2,8 @@ const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
-const { Resend } = require("resend");
 
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const RegistrationOtp = require("../models/RegistrationOtp");
 
@@ -31,42 +29,7 @@ function isGmailAddress(email) {
   return /^[^\s@]+@gmail\.com$/i.test(normalized);
 }
 
-async function createTransporter() {
-  console.log("GMAIL_USER =", process.env.GMAIL_USER);
-  console.log(
-    "GMAIL_APP_PASSWORD exists =",
-    !!process.env.GMAIL_APP_PASSWORD
-  );
 
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-
-  if (!user || !pass) {
-    throw new Error("Gmail SMTP credentials are not configured");
-  }
-
- const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user,
-    pass,
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000,
-});
-
-  await transporter.verify();
-
-  console.log("SMTP connection successful");
-
-  return transporter;
-}
 
 function generateOtpCode() {
   return crypto.randomInt(100000, 1000000).toString();
@@ -162,14 +125,29 @@ async function upsertOtpDocument(email) {
 
   console.log("Sending OTP to:", normalizedEmail);
 
-  const result = await resend.emails.send({
-    from: "LogiTrack <logitrack862@gmail.com>",
-    to: normalizedEmail,
-    subject: "Your LogiTrack verification code",
-    html: buildOtpEmailHtml(otp, OTP_EXPIRY_MINUTES),
-  });
+  try {
+    const transporter = nodemailer.createTransport({
+      host: "smtp-relay.brevo.com",
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.BREVO_USER,
+        pass: process.env.BREVO_PASS,
+      },
+    });
 
-  console.log("Email result:", result);
+    const result = await transporter.sendMail({
+      from: "LogiTrack <logitrack862@gmail.com>",
+      to: normalizedEmail,
+      subject: "Your LogiTrack verification code",
+      html: buildOtpEmailHtml(otp, OTP_EXPIRY_MINUTES),
+    });
+
+    console.log("Email result:", result);
+  } catch (error) {
+    console.error("Brevo Error:", error);
+    throw error;
+  }
 
   return {
     email: normalizedEmail,
