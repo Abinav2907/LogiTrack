@@ -4,25 +4,25 @@ const orders = [
   {
     id: "#1001",
     customer: "Rahul Sharma",
-    amount: "$240",
+    amount: "₹240",
     status: "Completed",
   },
   {
     id: "#1002",
     customer: "Aisha Khan",
-    amount: "$180",
+    amount: "₹180",
     status: "Pending",
   },
   {
     id: "#1003",
     customer: "John Mathew",
-    amount: "$420",
+    amount: "₹420",
     status: "Out for Delivery",
   },
   {
     id: "#1004",
     customer: "Vijay Kumar",
-    amount: "$120",
+    amount: "₹120",
     status: "Returned",
   },
 ];

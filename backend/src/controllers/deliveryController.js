@@ -88,6 +88,8 @@ function mapOrderToRecord(o) {
       o.customerName || (o.customerId ? o.customerId.toString() : "Unknown"),
     city: addr.city || null,
     address: addressStr,
+    latitude: addr.latitude || null,
+    longitude: addr.longitude || null,
     eta: getEtaForOrder(o),
     status: o.status,
     priority: o.priority || null,
@@ -226,6 +228,27 @@ const acceptOrder = async (req, res, next) => {
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
+    const terminalStatuses = [
+      "completed",
+      "delivered",
+      "failed",
+      "returned",
+      "cancelled",
+    ];
+
+    const activeAssignedOrders = await Order.countDocuments({
+      assignedAgent: userId,
+      status: { $nin: terminalStatuses },
+      _id: { $ne: order._id },
+    });
+
+    if (activeAssignedOrders > 0) {
+      return res.status(403).json({
+        message:
+          "Complete your current delivery before accepting another order.",
+      });
+    }
+
     if (
       !order.assignedAgent ||
       String(order.assignedAgent) !== String(userId)
@@ -241,7 +264,6 @@ const acceptOrder = async (req, res, next) => {
     order.status = "shipped";
     order.shippedAt = new Date();
     await order.save();
-
     const populated = await Order.findById(order._id)
       .populate("assignedAgent", "fullName email role")
       .populate("items.product", "name");

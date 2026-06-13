@@ -75,13 +75,41 @@ export default function AnalyticsPage() {
     const baseRevenue = Math.floor(analytics.totalRevenue / 7);
     const baseOrders = Math.floor(analytics.totalOrders / 7);
     return [
-      { month: "Jan", revenue: baseRevenue * 0.5, orders: Math.floor(baseOrders * 0.6) },
-      { month: "Feb", revenue: baseRevenue * 0.65, orders: Math.floor(baseOrders * 0.75) },
-      { month: "Mar", revenue: baseRevenue * 0.76, orders: Math.floor(baseOrders * 0.85) },
-      { month: "Apr", revenue: baseRevenue * 0.72, orders: Math.floor(baseOrders * 0.8) },
-      { month: "May", revenue: baseRevenue * 0.91, orders: Math.floor(baseOrders * 1.0) },
-      { month: "Jun", revenue: baseRevenue * 1.02, orders: Math.floor(baseOrders * 1.09) },
-      { month: "Jul", revenue: baseRevenue * 1.13, orders: Math.floor(baseOrders * 1.2) },
+      {
+        month: "Jan",
+        revenue: baseRevenue * 0.5,
+        orders: Math.floor(baseOrders * 0.6),
+      },
+      {
+        month: "Feb",
+        revenue: baseRevenue * 0.65,
+        orders: Math.floor(baseOrders * 0.75),
+      },
+      {
+        month: "Mar",
+        revenue: baseRevenue * 0.76,
+        orders: Math.floor(baseOrders * 0.85),
+      },
+      {
+        month: "Apr",
+        revenue: baseRevenue * 0.72,
+        orders: Math.floor(baseOrders * 0.8),
+      },
+      {
+        month: "May",
+        revenue: baseRevenue * 0.91,
+        orders: Math.floor(baseOrders * 1.0),
+      },
+      {
+        month: "Jun",
+        revenue: baseRevenue * 1.02,
+        orders: Math.floor(baseOrders * 1.09),
+      },
+      {
+        month: "Jul",
+        revenue: baseRevenue * 1.13,
+        orders: Math.floor(baseOrders * 1.2),
+      },
     ];
   };
 
@@ -90,7 +118,7 @@ export default function AnalyticsPage() {
     return [
       { region: "North", deliveries: Math.floor(analytics.totalOrders * 0.35) },
       { region: "East", deliveries: Math.floor(analytics.totalOrders * 0.45) },
-      { region: "South", deliveries: Math.floor(analytics.totalOrders * 0.40) },
+      { region: "South", deliveries: Math.floor(analytics.totalOrders * 0.4) },
       { region: "West", deliveries: Math.floor(analytics.totalOrders * 0.33) },
     ];
   };
@@ -102,35 +130,64 @@ export default function AnalyticsPage() {
     const delayed = Math.floor(analytics.totalOrders * 0.09);
     const cancelled = Math.floor(analytics.totalOrders * 0.05);
     return [
-      { name: "Delivered", value: delivered, color: "bg-emerald-400", hex: "#22c55e" },
-      { name: "In Transit", value: inTransit, color: "bg-sky-400", hex: "#38bdf8" },
-      { name: "Delayed", value: delayed, color: "bg-orange-400", hex: "#f97316" },
-      { name: "Cancelled", value: cancelled, color: "bg-red-400", hex: "#ef4444" },
+      {
+        name: "Delivered",
+        value: delivered,
+        color: "bg-emerald-400",
+        hex: "#22c55e",
+      },
+      {
+        name: "In Transit",
+        value: inTransit,
+        color: "bg-sky-400",
+        hex: "#38bdf8",
+      },
+      {
+        name: "Delayed",
+        value: delayed,
+        color: "bg-orange-400",
+        hex: "#f97316",
+      },
+      {
+        name: "Cancelled",
+        value: cancelled,
+        color: "bg-red-400",
+        hex: "#ef4444",
+      },
     ];
   };
 
   const generateStats = () => {
     if (!analytics) return [];
     const revenueK = (analytics.totalRevenue / 1000).toFixed(1);
-    const avgOrderValue = analytics.totalOrders > 0
-      ? (analytics.totalRevenue / analytics.totalOrders).toFixed(2)
-      : "0";
+    const avgOrderValue =
+      analytics.totalOrders > 0
+        ? (analytics.totalRevenue / analytics.totalOrders).toFixed(2)
+        : "0";
     const routeEfficiency = 94; // Static placeholder
     const onTimeDelivery = 91; // Static placeholder
 
     return [
       {
         label: "Revenue this month",
-        value: `$${revenueK}K`,
+        value: `₹${revenueK}K`,
         delta: `+${analytics.salesGrowthPercent.toFixed(1)}%`,
       },
       {
         label: "Average order value",
-        value: `$${avgOrderValue}`,
+        value: `₹${avgOrderValue}`,
         delta: "+4.3%",
       },
-      { label: "Route efficiency", value: `${routeEfficiency}%`, delta: "+2.7%" },
-      { label: "On-time delivery", value: `${onTimeDelivery}%`, delta: "+5.1%" },
+      {
+        label: "Route efficiency",
+        value: `${routeEfficiency}%`,
+        delta: "+2.7%",
+      },
+      {
+        label: "On-time delivery",
+        value: `${onTimeDelivery}%`,
+        delta: "+5.1%",
+      },
     ];
   };
 

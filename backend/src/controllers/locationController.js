@@ -1,6 +1,7 @@
-const LocationUpdate = require('../models/LocationUpdate');
-const Delivery = require('../models/Delivery');
-const { ERROR_MESSAGES } = require('../utils/constants');
+const LocationUpdate = require("../models/LocationUpdate");
+const Delivery = require("../models/Delivery");
+const Order = require("../models/Order");
+const { ERROR_MESSAGES } = require("../utils/constants");
 
 // Create location update
 const createLocationUpdate = async (req, res, next) => {
@@ -19,12 +20,17 @@ const createLocationUpdate = async (req, res, next) => {
         .json({ error: ERROR_MESSAGES.MISSING_LOCATION_DETAILS });
     }
 
-    // Check if delivery exists
-    const delivery = await Delivery.findOne({ id: payload.deliveryId });
+    // Check if delivery exists in legacy Delivery collection
+    let delivery = await Delivery.findOne({ id: payload.deliveryId });
+
+    // If not found, check if it's a current Order _id
     if (!delivery) {
-      return res
-        .status(404)
-        .json({ error: ERROR_MESSAGES.DELIVERY_NOT_FOUND });
+      const order = await Order.findById(payload.deliveryId);
+      if (!order) {
+        return res
+          .status(404)
+          .json({ error: ERROR_MESSAGES.DELIVERY_NOT_FOUND });
+      }
     }
 
     // Create location update
@@ -32,13 +38,13 @@ const createLocationUpdate = async (req, res, next) => {
       deliveryId: payload.deliveryId,
       latitude: Number(payload.latitude),
       longitude: Number(payload.longitude),
-      source: payload.source || 'manual',
+      source: payload.source || "manual",
       displayName: payload.displayName,
       formattedAddress: payload.formattedAddress,
-      city: payload.city || 'Unknown city',
-      state: payload.state || 'Unknown state',
-      country: payload.country || 'Unknown country',
-      postalCode: payload.postalCode || 'N/A',
+      city: payload.city || "Unknown city",
+      state: payload.state || "Unknown state",
+      country: payload.country || "Unknown country",
+      postalCode: payload.postalCode || "N/A",
       timestamp: payload.timestamp || new Date().toLocaleString(),
     });
 
@@ -65,9 +71,7 @@ const getLatestLocationUpdate = async (req, res, next) => {
       .lean();
 
     if (!latest) {
-      return res
-        .status(404)
-        .json({ error: ERROR_MESSAGES.NO_LOCATION_UPDATE });
+      return res.status(404).json({ error: ERROR_MESSAGES.NO_LOCATION_UPDATE });
     }
 
     res.json(latest);

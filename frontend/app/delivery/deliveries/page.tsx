@@ -12,14 +12,24 @@ import {
   fetchDeliveries,
   updateDeliveryStatus,
   acceptDelivery,
+  saveLocationUpdate,
 } from "@/lib/api";
 
-const statusOptions: Record<DeliveryStatus, DeliveryStatus[]> = {
+const statusOptions: Partial<Record<DeliveryStatus, DeliveryStatus[]>> = {
   Pending: ["Out for Delivery", "Failed Attempt"],
+  pending: ["Out for Delivery", "Failed Attempt"],
+  Assigned: ["Out for Delivery", "Failed Attempt"],
+  assigned: ["Out for Delivery", "Failed Attempt"],
   "Out for Delivery": ["Delivered", "Failed Attempt"],
+  "out-for-delivery": ["Delivered", "Failed Attempt"],
+  Shipped: ["Delivered", "Failed Attempt"],
+  shipped: ["Delivered", "Failed Attempt"],
   Delivered: [],
+  delivered: [],
   "Failed Attempt": ["Returned"],
+  "failed-attempt": ["Returned"],
   Returned: [],
+  returned: [],
 };
 
 function toTitleCase(s?: string) {
@@ -73,10 +83,29 @@ export default function DeliveriesPage() {
     };
   }, []);
 
+  const isAssignedToCurrentUser = (delivery: DeliveryRecord) => {
+    if (typeof window === "undefined") return false;
+    const currentUserId = localStorage.getItem("userId");
+    const assigned = delivery.raw?.assignedAgent;
+    if (!assigned) return false;
+    if (typeof assigned === "string") return String(assigned) === currentUserId;
+    if (assigned._id) return String(assigned._id) === currentUserId;
+    if (assigned.id) return String(assigned.id) === currentUserId;
+    return false;
+  };
+
   const activeCount = deliveries.filter((item) => {
     const s = String(item.status || "").toLowerCase();
     return !["completed", "delivered", "returned"].includes(s);
   }).length;
+
+  const hasActiveAssignedOrder = deliveries.some((delivery) => {
+    const s = String(delivery.status || "").toLowerCase();
+    return (
+      !["completed", "delivered", "returned"].includes(s) &&
+      isAssignedToCurrentUser(delivery)
+    );
+  });
 
   const completedCount = deliveries.filter((item) => {
     const s = String(item.status || "").toLowerCase();
@@ -119,7 +148,56 @@ export default function DeliveriesPage() {
     try {
       const accepted = await acceptDelivery(id);
       setDeliveries((prev) => prev.map((p) => (p.id === id ? accepted : p)));
-      toast.success("Delivery accepted.");
+      toast.success("Delivery accepted. Capturing your current location...");
+
+      if (!navigator.geolocation) {
+        toast.error(
+          "Geolocation is not supported by your browser. Please allow location access.",
+        );
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          const displayName = `Driver location ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+          const formattedAddress = displayName;
+
+          try {
+            await saveLocationUpdate({
+              deliveryId: accepted.id,
+              latitude: lat,
+              longitude: lon,
+              source: "browser",
+              displayName,
+              formattedAddress,
+              city: "Unknown city",
+              state: "Unknown state",
+              country: "Unknown country",
+              postalCode: "N/A",
+              timestamp: new Date().toLocaleString(),
+            });
+            toast.success(
+              "Driver current location saved for customer tracking.",
+            );
+          } catch (updateError) {
+            console.error("Unable to save driver location:", updateError);
+            toast.error(
+              updateError instanceof Error
+                ? updateError.message
+                : "Unable to save current location.",
+            );
+          }
+        },
+        (error) => {
+          toast.error(`Unable to capture current location: ${error.message}`);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+        },
+      );
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Unable to accept delivery.",
@@ -127,20 +205,10 @@ export default function DeliveriesPage() {
     }
   };
 
-  const isAssignedToCurrentUser = (delivery: DeliveryRecord) => {
-    if (typeof window === "undefined") return false;
-    const currentUserId = localStorage.getItem("userId");
-    const assigned = delivery.raw?.assignedAgent;
-    if (!assigned) return false;
-    if (typeof assigned === "string") return String(assigned) === currentUserId;
-    if (assigned._id) return String(assigned._id) === currentUserId;
-    if (assigned.id) return String(assigned.id) === currentUserId;
-    return false;
-  };
-
   const [completionPhotos, setCompletionPhotos] = useState<
     Record<string, string>
   >({});
+
   const [completionPreviews, setCompletionPreviews] = useState<
     Record<string, string>
   >({});
@@ -149,10 +217,10 @@ export default function DeliveriesPage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setCompletionPhotos((prev) => ({ ...prev, [id]: reader.result }));
-        setCompletionPreviews((prev) => ({ ...prev, [id]: reader.result }));
-      }
+      const result = reader.result;
+      if (typeof result !== "string") return;
+      setCompletionPhotos((prev) => ({ ...prev, [id]: result }));
+      setCompletionPreviews((prev) => ({ ...prev, [id]: result }));
     };
     reader.readAsDataURL(file);
   };
@@ -234,7 +302,7 @@ export default function DeliveriesPage() {
             return (
               <div
                 key={delivery.id}
-                className="bg-gradient-to-br from-[#0b0b0b] to-[#0f0f13] border border-[#27272A] rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-shadow duration-200"
+                className="bg-linear-to-br from-[#0b0b0b] to-[#0f0f13] border border-[#27272A] rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-shadow duration-200"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -318,9 +386,12 @@ export default function DeliveriesPage() {
                       {!delivery.raw?.assignedAgent && (
                         <button
                           onClick={() => void handleAccept(delivery.id)}
-                          className="rounded-full bg-green-500 px-5 py-3 text-white font-semibold shadow hover:brightness-105 transition"
+                          disabled={hasActiveAssignedOrder}
+                          className={`rounded-full px-5 py-3 text-white font-semibold shadow transition ${hasActiveAssignedOrder ? "bg-slate-600 cursor-not-allowed" : "bg-green-500 hover:brightness-105"}`}
                         >
-                          Claim & Accept
+                          {hasActiveAssignedOrder
+                            ? "Claim disabled until current delivery completes"
+                            : "Claim & Accept"}
                         </button>
                       )}
 
@@ -332,6 +403,7 @@ export default function DeliveriesPage() {
                           <input
                             type="file"
                             accept="image/*"
+                            aria-label="Upload completion photo"
                             onChange={(event) =>
                               handlePhotoChange(
                                 delivery.id,

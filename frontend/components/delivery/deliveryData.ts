@@ -1,21 +1,45 @@
 export type DeliveryStatus =
   | "Pending"
+  | "pending"
+  | "Assigned"
+  | "assigned"
+  | "Shipped"
+  | "shipped"
   | "Out for Delivery"
+  | "out-for-delivery"
   | "Delivered"
+  | "delivered"
+  | "Completed"
+  | "completed"
   | "Failed Attempt"
-  | "Returned";
+  | "failed-attempt"
+  | "Failed"
+  | "failed"
+  | "Returned"
+  | "returned"
+  | "Cancelled"
+  | "cancelled";
 
-export type DeliveryPriority = "High" | "Medium" | "Low";
+export type DeliveryPriority = "High" | "Medium" | "Low" | "Normal";
 
 export interface DeliveryRecord {
   id: string;
+  orderId?: string;
   customer: string;
   address: string;
   city: string;
+  latitude?: number | null;
+  longitude?: number | null;
   eta: string;
   status: DeliveryStatus;
-  priority: DeliveryPriority;
+  priority: DeliveryPriority | null;
   contact: string;
-  location: string;
-  lastUpdated: string;
+  agent?: {
+    _id: string;
+    name: string;
+    email?: string | null;
+  };
+  location: string | null;
+  lastUpdated: string | null;
+  raw?: any;
 }

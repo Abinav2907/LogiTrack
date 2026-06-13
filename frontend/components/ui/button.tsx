@@ -4,8 +4,12 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = {
-  default: "bg-[#7F1D1D] text-white hover:bg-[#991B1B]",
-  destructive: "bg-red-600 text-white hover:bg-red-700",
+  default:
+    "bg-[#7F1D1D] text-white shadow-sm shadow-red-900/20 hover:bg-[#991B1B]",
+  secondary:
+    "bg-[#27272A] text-white shadow-sm shadow-black/20 hover:bg-[#3F3F46]",
+  destructive:
+    "bg-red-600 text-white shadow-sm shadow-red-900/20 hover:bg-red-700",
   outline:
     "bg-transparent border border-neutral-700 text-white hover:bg-white/10",
   ghost: "bg-transparent text-white hover:bg-white/10",
@@ -13,9 +17,9 @@ const buttonVariants = {
 } as const;
 
 const buttonSizes = {
-  default: "min-w-[96px] px-4 py-2 text-sm",
-  sm: "min-w-[96px] px-3 py-1.5 text-xs",
-  lg: "px-5 py-3 text-base",
+  default: "min-w-[150px] px-6 py-3 text-sm",
+  sm: "min-w-[150px] px-6 py-3 text-sm",
+  lg: "min-w-[180px] px-6 py-3 text-base",
   icon: "h-10 w-10",
 } as const;
 

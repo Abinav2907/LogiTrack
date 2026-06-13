@@ -299,3 +299,11 @@ export async function saveLocationUpdate(
     body: JSON.stringify(payload),
   });
 }
+
+export async function fetchLatestLocationUpdate(
+  deliveryId: string,
+): Promise<any> {
+  return apiRequest<any>(
+    `/api/location-updates/latest?deliveryId=${encodeURIComponent(deliveryId)}`,
+  );
+}

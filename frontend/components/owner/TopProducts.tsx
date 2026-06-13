@@ -4,17 +4,17 @@ const products = [
   {
     name: "Wireless Scanner",
     sales: "1,248 sold",
-    revenue: "$12,400",
+    revenue: "₹12,400",
   },
   {
     name: "Packaging Boxes",
     sales: "982 sold",
-    revenue: "$8,920",
+    revenue: "₹8,920",
   },
   {
     name: "Barcode Labels",
     sales: "742 sold",
-    revenue: "$5,610",
+    revenue: "₹5,610",
   },
 ];
 

@@ -43,13 +43,17 @@ export default function ProductsPage() {
         const products = await fetchOwnerProducts();
 
         const mapped: ProductView[] = (products as ApiProduct[]).map((p) => {
-          const stock = typeof p.stock === "number" ? p.stock : Number(p.stock) || 0;
+          const stock =
+            typeof p.stock === "number" ? p.stock : Number(p.stock) || 0;
           const status =
             stock <= 0 ? "Out of Stock" : stock <= 5 ? "Low Stock" : "In Stock";
           const rawPrice = p.price ?? 0;
           const priceString =
-            typeof rawPrice === "number" ? `$${rawPrice}` : String(rawPrice);
-          const image = Array.isArray(p.images) && p.images.length ? p.images[0] : DEFAULT_IMAGE;
+            typeof rawPrice === "number" ? `₹${rawPrice}` : String(rawPrice);
+          const image =
+            Array.isArray(p.images) && p.images.length
+              ? p.images[0]
+              : DEFAULT_IMAGE;
 
           return {
             _id: p._id,
@@ -80,7 +84,10 @@ export default function ProductsPage() {
 
     window.addEventListener("global-search", onGlobalSearch as EventListener);
     return () =>
-      window.removeEventListener("global-search", onGlobalSearch as EventListener);
+      window.removeEventListener(
+        "global-search",
+        onGlobalSearch as EventListener,
+      );
   }, []);
 
   const filtered = useMemo(

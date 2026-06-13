@@ -3,46 +3,44 @@ const Order = require("../models/Order");
 
 exports.getAllOrders = async (req, res) => {
   try {
-    // Only return orders for the authenticated customer
-    const userId = req.user && (req.user._id || req.user.id);
-    console.log(
-      `getAllOrders called by userId=${userId} search=${req.query.search || ""}`,
-    );
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+    const customerId = req.user?.id || req.user?._id;
+    if (!customerId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
     const search = (req.query.search || "").toString().trim().toLowerCase();
+    console.log(
+      `getAllOrders called for customerId=${customerId} search=${search}`,
+    );
 
-    // Load orders for this customer and populate product info so frontend
-    // can search by product name if requested.
-    let orders = await Order.find({ customerId: userId })
+    // Fetch from Order collection only orders belonging to the authenticated customer.
+    const filter = { customerId };
+    let orders = await Order.find(filter)
       .populate("items.product")
       .sort({ createdAt: -1 });
 
     if (search) {
-      // Filter orders where any item's product name matches the search term
+      // Filter orders where any item's product name or customer name matches the search term
       orders = orders.filter((order) => {
+        const matchCustomer = (order.customerName || "")
+          .toLowerCase()
+          .includes(search);
         const items = order.items || [];
-        return items.some((it) => {
+        const matchItem = items.some((it) => {
           const name =
             (it.product && (it.product.name || it.product.title)) || "";
           return name.toLowerCase().includes(search);
         });
+        return matchCustomer || matchItem;
       });
     }
 
     const mappedOrders = orders.map((order) => ({
       id: order._id.toString(),
       orderId: order.orderId,
-      customerName: order.customerName,
+      customer: order.customerName,
       amount: order.totalPrice,
-      // Normalize status for frontend consistency: map 'completed' -> 'delivered'
-      status: (() => {
-        const s = String(order.status || "").toLowerCase();
-        if (s === "completed") return "delivered";
-        return s;
-      })(),
+      status: order.status === "completed" ? "delivered" : order.status,
       date: order.createdAt,
       items: (order.items || []).map((it) => ({
         product: (it.product && (it.product.name || it.product.title)) || null,

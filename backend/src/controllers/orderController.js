@@ -108,17 +108,20 @@ exports.createOrder = async (req, res, next) => {
       // Track owner ID from first product
       if (!ownerId) ownerId = product.ownerId;
 
-      // reduce stock
-      product.stock -= quantity;
-      await product.save();
+      // reduce stock using an atomic update to avoid validating any missing product fields
+      const updatedStock = product.stock - quantity;
+      await Product.updateOne(
+        { _id: product._id },
+        { $inc: { stock: -quantity } },
+      );
       logToFile(
-        `Stock reduced for product ${product.name}: new stock=${product.stock}`,
+        `Stock reduced for product ${product.name}: new stock=${updatedStock}`,
       );
       console.log(
         "Stock reduced for product:",
         product.name,
         "New stock:",
-        product.stock,
+        updatedStock,
       );
 
       const price = product.price;

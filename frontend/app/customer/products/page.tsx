@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/lib/mock-data";
 import { fetchProducts, API_BASE_URL } from "@/lib/api";
-import { Search, Filter, Heart, MapPin } from "lucide-react";
+import { addToCart } from "@/lib/cart";
+import { Search, Filter, Heart, MapPin, ShoppingCart } from "lucide-react";
 
 type NormalizedProduct = Product;
 
@@ -154,6 +155,20 @@ export default function ProductsPage() {
     setOrderMessage(null);
   };
 
+  const handleAddToCart = (product: NormalizedProduct) => {
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      category: product.category,
+    });
+    setOrderMessage({
+      type: "success",
+      text: "Product added to cart.",
+    });
+  };
+
   const submitOrder = async () => {
     setOrderMessage(null);
     setOrderingProductId(selectedProduct?.id || null);
@@ -173,11 +188,13 @@ export default function ProductsPage() {
     if (
       !deliveryAddress.street ||
       !deliveryAddress.city ||
-      !deliveryAddress.country
+      !deliveryAddress.country ||
+      deliveryAddress.latitude === 0 ||
+      deliveryAddress.longitude === 0
     ) {
       setOrderMessage({
         type: "error",
-        text: "Please fill in all required address fields.",
+        text: "Please fill in all required address fields and add latitude/longitude.",
       });
       setOrderingProductId(null);
       return;
@@ -364,6 +381,26 @@ export default function ProductsPage() {
                 onChange={(e) => handleAddressChange("country", e.target.value)}
                 className="px-3 py-2 border border-muted-foreground/30 rounded-lg bg-background text-foreground placeholder-muted-foreground"
               />
+              <input
+                type="number"
+                step="any"
+                placeholder="Latitude *"
+                value={deliveryAddress.latitude}
+                onChange={(e) =>
+                  handleAddressChange("latitude", Number(e.target.value))
+                }
+                className="px-3 py-2 border border-muted-foreground/30 rounded-lg bg-background text-foreground placeholder-muted-foreground"
+              />
+              <input
+                type="number"
+                step="any"
+                placeholder="Longitude *"
+                value={deliveryAddress.longitude}
+                onChange={(e) =>
+                  handleAddressChange("longitude", Number(e.target.value))
+                }
+                className="px-3 py-2 border border-muted-foreground/30 rounded-lg bg-background text-foreground placeholder-muted-foreground"
+              />
               <Button
                 variant="outline"
                 size="sm"
@@ -457,17 +494,28 @@ export default function ProductsPage() {
                     <span className="text-xl font-bold text-foreground">
                       ₹{product.price.toLocaleString()}
                     </span>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="gap-2"
-                      onClick={() => handleOrderNow(product)}
-                      disabled={
-                        showAddressForm && selectedProduct?.id === product.id
-                      }
-                    >
-                      Order Now
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="gap-2"
+                        onClick={() => handleAddToCart(product)}
+                      >
+                        <ShoppingCart className="h-4 w-4" />
+                        Add to Cart
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="gap-2"
+                        onClick={() => handleOrderNow(product)}
+                        disabled={
+                          showAddressForm && selectedProduct?.id === product.id
+                        }
+                      >
+                        Order Now
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>

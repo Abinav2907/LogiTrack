@@ -9,19 +9,9 @@ import { DeliveryMap } from "@/components/customer/delivery-map";
 import {
   fetchDeliveryByOrderId,
   fetchCustomerOrders as fetchOrders,
-  fetchTrackingByOrderId,
+  fetchLatestLocationUpdate,
 } from "@/lib/api";
-import { TrackingStep } from "@/lib/mock-data";
-import {
-  Package,
-  Truck,
-  CheckCircle,
-  Clock,
-  MapPin,
-  Phone,
-  MessageSquare,
-  RefreshCw,
-} from "lucide-react";
+import { Package, Truck, CheckCircle, MapPin, RefreshCw } from "lucide-react";
 
 const statusConfig = {
   delivered: {
@@ -49,13 +39,16 @@ type TrackingOrder = {
   date: string;
 };
 
-export default function TrackingPage() {
+function TrackingContent() {
   const searchParams = useSearchParams();
   const orderIdQuery = searchParams.get("orderId");
   const [orders, setOrders] = useState<TrackingOrder[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [trackingSteps, setTrackingSteps] = useState<TrackingStep[]>([]);
   const [deliveryRoute, setDeliveryRoute] = useState<any>(null);
+  const [routeInfo, setRouteInfo] = useState<{
+    distance: number;
+    duration: number;
+  } | null>(null);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [loadingTracking, setLoadingTracking] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -118,11 +111,48 @@ export default function TrackingPage() {
     loadOrders();
   }, []);
 
+  const fetchRouteSummary = async (currentPosition: any, destination: any) => {
+    if (!currentPosition || !destination) return null;
+    if (
+      typeof currentPosition.lat !== "number" ||
+      typeof currentPosition.lng !== "number" ||
+      typeof destination.lat !== "number" ||
+      typeof destination.lng !== "number"
+    ) {
+      return null;
+    }
+
+    const response = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${currentPosition.lng},${currentPosition.lat};${destination.lng},${destination.lat}?overview=false&geometries=geojson`,
+      {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "Devfusion-LogiTrack/1.0",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Unable to calculate distance/time");
+    }
+
+    const data = await response.json();
+    if (!data.routes || data.routes.length === 0) {
+      throw new Error("Route not available");
+    }
+
+    const route = data.routes[0];
+    return {
+      distance: Math.round((route.distance / 1000) * 10) / 10,
+      duration: Math.round(route.duration / 60),
+    };
+  };
+
   useEffect(() => {
-    const loadTracking = async () => {
+    const loadDeliveryRoute = async () => {
       if (!selectedOrderId) {
-        setTrackingSteps([]);
         setDeliveryRoute(null);
+        setRouteInfo(null);
         return;
       }
 
@@ -130,29 +160,57 @@ export default function TrackingPage() {
       setError(null);
 
       try {
-        const trackingData = await fetchTrackingByOrderId(selectedOrderId);
-        setTrackingSteps(trackingData.steps || []);
+        const deliveryData = await fetchDeliveryByOrderId(selectedOrderId);
+        let currentPosition = deliveryData.currentPosition;
 
         try {
-          const deliveryData = await fetchDeliveryByOrderId(selectedOrderId);
-          setDeliveryRoute(deliveryData);
-        } catch (deliveryError) {
-          setDeliveryRoute(null);
+          const latestUpdate = await fetchLatestLocationUpdate(selectedOrderId);
+          if (
+            latestUpdate &&
+            typeof latestUpdate.latitude === "number" &&
+            typeof latestUpdate.longitude === "number"
+          ) {
+            currentPosition = {
+              lat: latestUpdate.latitude,
+              lng: latestUpdate.longitude,
+              displayName: latestUpdate.displayName,
+              formattedAddress: latestUpdate.formattedAddress,
+              city: latestUpdate.city,
+              state: latestUpdate.state,
+              country: latestUpdate.country,
+            };
+          }
+        } catch (updateError) {
+          console.warn(
+            "Unable to fetch latest driver location update:",
+            updateError,
+          );
         }
+
+        const routeSummary = await fetchRouteSummary(
+          currentPosition,
+          deliveryData.destination,
+        );
+
+        setDeliveryRoute({
+          ...deliveryData,
+          currentPosition,
+        });
+        setRouteInfo(routeSummary);
       } catch (fetchError) {
         setError(
           fetchError instanceof Error
             ? fetchError.message
-            : "Unable to load tracking data",
+            : "Unable to load delivery tracking data",
         );
-        setTrackingSteps([]);
         setDeliveryRoute(null);
+        setRouteInfo(null);
       } finally {
         setLoadingTracking(false);
       }
     };
 
-    loadTracking();
+    loadDeliveryRoute();
   }, [selectedOrderId, refreshKey]);
 
   const activeOrders = orders.filter((order) => order.status !== "delivered");
@@ -160,6 +218,15 @@ export default function TrackingPage() {
     activeOrders.find((order) => order.id === selectedOrderId) ||
     activeOrders[0] ||
     null;
+
+  const customerMapRoute = deliveryRoute
+    ? {
+        origin: deliveryRoute.currentPosition,
+        destination: deliveryRoute.destination,
+        currentPosition: deliveryRoute.currentPosition,
+        waypoints: deliveryRoute.waypoints || [],
+      }
+    : undefined;
 
   useEffect(() => {
     if (!selectedOrderId && selectedOrder) {
@@ -174,10 +241,9 @@ export default function TrackingPage() {
   };
 
   return (
-    <Suspense fallback={<div className="space-y-6" />}>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Order Tracking</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Order Tracking</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Track your orders in real-time with live delivery updates
         </p>
@@ -274,153 +340,107 @@ export default function TrackingPage() {
             <>
               <Card className="border-none shadow-sm">
                 <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">
-                      Order #{selectedOrder.id}
-                    </CardTitle>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      onClick={refreshTracking}
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                      Refresh
-                    </Button>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="ml-2"
-                      onClick={async () => {
-                        if (!selectedOrderId) return;
-                        setLoadingTracking(true);
-                        setError(null);
-                        try {
-                          const trackingData =
-                            await fetchTrackingByOrderId(selectedOrderId);
-                          setTrackingSteps(trackingData.steps || []);
-                        } catch (err) {
-                          // ignore - will show message below
-                        }
-                        try {
-                          const deliveryData =
-                            await fetchDeliveryByOrderId(selectedOrderId);
-                          setDeliveryRoute(deliveryData);
-                        } catch (err) {
-                          setDeliveryRoute(null);
-                        } finally {
-                          setLoadingTracking(false);
-                        }
-                      }}
-                    >
-                      Locate
-                    </Button>
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <CardTitle className="text-lg">
+                        Order #{selectedOrder.id}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {selectedOrder.customer}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={refreshTracking}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Refresh
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {loadingTracking ? (
                     <div className="flex items-center justify-center py-12">
                       <p className="text-sm text-muted-foreground">
-                        Loading tracking details...
+                        Loading latest delivery location...
                       </p>
                     </div>
                   ) : error ? (
                     <div className="flex flex-col items-center justify-center py-12">
                       <p className="text-lg font-medium text-foreground">
-                        Unable to load tracking details
+                        Unable to load delivery location
                       </p>
                       <p className="mt-1 text-sm text-muted-foreground">
                         {error}
                       </p>
                     </div>
-                  ) : trackingSteps.length > 0 ? (
+                  ) : deliveryRoute ? (
                     <div className="space-y-4">
-                      {trackingSteps.map((step, index) => (
-                        <div key={step.id} className="flex gap-4">
-                          <div className="flex flex-col items-center">
-                            <div
-                              className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                                step.status === "completed"
-                                  ? "bg-emerald-500 text-white"
-                                  : step.status === "in-progress"
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              {step.status === "completed" ? (
-                                <CheckCircle className="h-4 w-4" />
-                              ) : step.status === "in-progress" ? (
-                                <Truck className="h-4 w-4" />
-                              ) : (
-                                <Clock className="h-4 w-4" />
-                              )}
-                            </div>
-                            {index < trackingSteps.length - 1 && (
-                              <div
-                                className={`h-12 w-0.5 ${
-                                  step.status === "completed"
-                                    ? "bg-emerald-500"
-                                    : "bg-muted"
-                                }`}
-                              />
-                            )}
-                          </div>
-                          <div className="flex-1 pb-4">
-                            <div className="flex items-center justify-between">
-                              <p className="font-medium text-foreground">
-                                {step.title}
-                              </p>
-                              {step.timestamp && (
-                                <span className="text-sm text-muted-foreground">
-                                  {step.timestamp}
-                                </span>
-                              )}
-                            </div>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {step.description}
-                            </p>
-                          </div>
+                      <div className="rounded-2xl border border-[#27272A] bg-[#111111] p-5">
+                        <div className="flex items-center gap-2 text-sm text-[#A1A1AA]">
+                          <MapPin className="h-4 w-4" />
+                          <p>Delivery partner location</p>
                         </div>
-                      ))}
+                        <p className="mt-3 text-lg font-semibold text-foreground">
+                          {deliveryRoute.currentPosition?.formattedAddress ||
+                            deliveryRoute.currentPosition?.displayName ||
+                            "Current driver location"}
+                        </p>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          {deliveryRoute.currentPosition?.city
+                            ? `${deliveryRoute.currentPosition.city}, ${deliveryRoute.currentPosition.state}`
+                            : deliveryRoute.currentPosition?.formattedAddress ||
+                              "Address details are not available yet."}
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border border-[#27272A] bg-[#111111] p-5">
+                        <p className="text-sm text-[#A1A1AA]">
+                          Delivery destination
+                        </p>
+                        <p className="mt-3 text-lg font-semibold text-foreground">
+                          {deliveryRoute.destination?.name ||
+                            deliveryRoute.destination?.formattedAddress ||
+                            selectedOrder.customer}
+                        </p>
+                        {deliveryRoute.destination?.formattedAddress && (
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {deliveryRoute.destination.formattedAddress}
+                          </p>
+                        )}
+                      </div>
+
+                      <Card className="border-none shadow-sm">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <MapPin className="h-5 w-5 text-primary" />
+                            Live Delivery Map
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                          <div className="h-80 overflow-hidden rounded-b-lg">
+                            <DeliveryMap route={customerMapRoute} />
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12">
                       <p className="text-lg font-medium text-foreground">
-                        No tracking updates available
+                        No delivery location found
                       </p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Tracking information will appear once the order is
-                        processed.
+                        The delivery will appear here once the driver shares a
+                        live location.
                       </p>
                     </div>
                   )}
                 </CardContent>
               </Card>
-
-              <Card className="border-none shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    Live Delivery Map
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="h-75 overflow-hidden rounded-b-lg">
-                    <DeliveryMap route={deliveryRoute} />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="flex gap-3">
-                <Button variant="outline" className="flex-1 gap-2">
-                  <Phone className="h-4 w-4" />
-                  Call Driver
-                </Button>
-                <Button variant="outline" className="flex-1 gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Send Message
-                </Button>
-              </div>
             </>
           ) : (
             <Card className="border-none shadow-sm">
@@ -437,6 +457,13 @@ export default function TrackingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TrackingPage() {
+  return (
+    <Suspense fallback={<div className="space-y-6">Loading...</div>}>
+      <TrackingContent />
     </Suspense>
   );
 }

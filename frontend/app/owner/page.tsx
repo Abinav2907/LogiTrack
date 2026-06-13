@@ -2,7 +2,7 @@
 
 import DashboardCard from "@/components/owner/DashboardCard";
 // DeliveryMap removed per owner's request
-import { DollarSign, ShoppingCart, Package } from "lucide-react";
+import { Currency, ShoppingCart, Package } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   fetchOwnerProducts,
@@ -246,9 +246,9 @@ export default function OwnerDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           <DashboardCard
             title="Total Revenue"
-            value={`$${Number(revenue).toLocaleString()}`}
+            value={`₹${Number(revenue).toLocaleString()}`}
             change="+12.5%"
-            icon={<DollarSign size={24} />}
+            icon={<Currency size={24} />}
           />
 
           <DashboardCard

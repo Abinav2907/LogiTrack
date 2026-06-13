@@ -5,8 +5,8 @@ import { Bell, Crown } from "lucide-react";
 import { JSX } from "react/jsx-runtime";
 
 const plans = [
-  { name: "Starter", price: "$29/mo", details: "Up to 5 users" },
-  { name: "Growth", price: "$59/mo", details: "Up to 20 users" },
+  { name: "Starter", price: "₹29/mo", details: "Up to 5 users" },
+  { name: "Growth", price: "₹59/mo", details: "Up to 20 users" },
   { name: "Enterprise", price: "Custom", details: "Unlimited seats" },
 ];
 

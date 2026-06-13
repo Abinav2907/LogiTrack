@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useLogout } from "@/lib/logout";
 
 import {
-  DollarSign,
+  Currency,
   History,
   LayoutDashboard,
   MapPinned,
@@ -31,7 +31,7 @@ const Sidebar = () => {
     {
       name: "Earnings",
       href: "/delivery/earnings",
-      icon: DollarSign,
+      icon: Currency,
     },
     {
       name: "Tracking",

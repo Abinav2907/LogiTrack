@@ -6,7 +6,7 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
-  MapPin,
+  CheckCircle,
   BarChart3,
   Truck,
 } from "lucide-react";
@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/customer", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/customer/products", icon: Package, label: "Products" },
-  { href: "/customer/orders", icon: ShoppingCart, label: "Orders" },
-  { href: "/customer/tracking", icon: MapPin, label: "Tracking" },
+  { href: "/customer/cart", icon: ShoppingCart, label: "Cart" },
+  { href: "/customer/orders", icon: CheckCircle, label: "Orders" },
   { href: "/customer/analytics", icon: BarChart3, label: "Analytics" },
 ];
 

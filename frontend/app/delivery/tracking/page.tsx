@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 import type { DeliveryRecord } from "@/components/delivery/deliveryData";
+import { DeliveryMap } from "@/components/customer/delivery-map";
 import { fetchDashboard, saveLocationUpdate } from "@/lib/api";
 
 interface LocationDetails {
@@ -19,6 +20,12 @@ interface LocationDetails {
   timestamp: string;
 }
 
+interface RouteInfo {
+  distance: number;
+  duration: number;
+  polyline: string;
+}
+
 export default function TrackingPage() {
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
@@ -27,24 +34,76 @@ export default function TrackingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeRoute, setActiveRoute] = useState<DeliveryRecord | null>(null);
   const [showMap, setShowMap] = useState(false);
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+
+  const destinationName =
+    activeRoute?.address || activeRoute?.customer || "Customer destination";
+
+  const deliveryMapRoute =
+    activeRoute &&
+    typeof activeRoute.latitude === "number" &&
+    typeof activeRoute.longitude === "number"
+      ? {
+          origin:
+            locationDetails != null
+              ? {
+                  lat: locationDetails.latitude,
+                  lng: locationDetails.longitude,
+                  name: locationDetails.displayName,
+                }
+              : undefined,
+          destination: {
+            lat: activeRoute.latitude,
+            lng: activeRoute.longitude,
+            name: destinationName,
+          },
+          currentPosition:
+            locationDetails != null
+              ? {
+                  lat: locationDetails.latitude,
+                  lng: locationDetails.longitude,
+                  name: locationDetails.displayName,
+                }
+              : undefined,
+          waypoints:
+            locationDetails != null
+              ? [
+                  {
+                    lat: locationDetails.latitude,
+                    lng: locationDetails.longitude,
+                  },
+                  {
+                    lat: activeRoute.latitude,
+                    lng: activeRoute.longitude,
+                  },
+                ]
+              : [],
+        }
+      : null;
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadActiveRoute() {
       try {
+        // Get the dashboard which includes active deliveries assigned to this agent
         const data = await fetchDashboard();
 
         if (isMounted) {
-          setActiveRoute(data.activeRoutes[0] ?? null);
+          if (data.activeRoutes && data.activeRoutes.length > 0) {
+            setActiveRoute(data.activeRoutes[0]);
+          } else {
+            toast("No active deliveries. Accept an order to start tracking.", {
+              icon: "ℹ️",
+            });
+          }
         }
       } catch (err) {
         if (isMounted) {
-          toast.error(
-            err instanceof Error
-              ? err.message
-              : "Unable to load the active route.",
-          );
+          console.error("Error loading deliveries:", err);
+          toast("Unable to load active deliveries.", {
+            icon: "ℹ️",
+          });
         }
       }
     }
@@ -55,6 +114,56 @@ export default function TrackingPage() {
       isMounted = false;
     };
   }, []);
+
+  const fetchRoute = async (
+    agentLat: number,
+    agentLon: number,
+    customerLat: number,
+    customerLon: number,
+  ) => {
+    const routeUrl = `https://router.project-osrm.org/route/v1/driving/${agentLon},${agentLat};${customerLon},${customerLat}?overview=false&geometries=geojson&steps=true`;
+    try {
+      const response = await fetch(routeUrl, {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "Devfusion-LogiTrack/1.0",
+        },
+      });
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => "");
+        console.error("OSRM route failed", response.status, body, routeUrl);
+        toast.error("Route calculation failed. Showing map only.");
+        setRouteInfo(null);
+        return;
+      }
+
+      const data = (await response.json()) as {
+        routes?: Array<{
+          distance: number;
+          duration: number;
+          geometry?: string;
+        }>;
+      };
+
+      if (!data.routes || data.routes.length === 0) {
+        console.error("OSRM returned no route", data, routeUrl);
+        toast.error("No route found. Showing map only.");
+        setRouteInfo(null);
+        return;
+      }
+
+      const route = data.routes[0];
+      setRouteInfo({
+        distance: Math.round((route.distance / 1000) * 10) / 10, // km
+        duration: Math.round(route.duration / 60), // minutes
+        polyline: route.geometry || "",
+      });
+    } catch (error) {
+      console.error("Route error:", error);
+      toast.error("Unable to calculate route");
+    }
+  };
 
   const resolveLocation = async (
     lat: number,
@@ -104,7 +213,9 @@ export default function TrackingPage() {
 
       const result: LocationDetails = {
         displayName: data.display_name || `${city}, ${state}`,
-        formattedAddress: `${city}, ${state}, ${country}${postalCode !== "N/A" ? ` ${postalCode}` : ""}`,
+        formattedAddress: `${city}, ${state}, ${country}${
+          postalCode !== "N/A" ? ` ${postalCode}` : ""
+        }`,
         city,
         state,
         country,
@@ -118,13 +229,29 @@ export default function TrackingPage() {
       setLocationDetails(result);
 
       if (!activeRoute) {
+        toast.success("Location resolved!");
+        setShowMap(true);
+        return;
+      }
+
+      setShowMap(true);
+
+      // Calculate route if customer has coordinates
+      if (
+        activeRoute.latitude &&
+        activeRoute.longitude &&
+        typeof activeRoute.latitude === "number" &&
+        typeof activeRoute.longitude === "number"
+      ) {
+        await fetchRoute(lat, lon, activeRoute.latitude, activeRoute.longitude);
+        toast.success("Location resolved and route calculated!");
+      } else {
         toast(
-          "Location resolved locally, but no active route is available to sync.",
+          "Delivery address coordinates not available. Showing your location only.",
           {
             icon: "ℹ️",
           },
         );
-        return;
       }
 
       await saveLocationUpdate({
@@ -140,11 +267,12 @@ export default function TrackingPage() {
         postalCode: result.postalCode,
         timestamp: result.timestamp,
       });
-      toast.success("Location resolved and synced to the backend.");
     } catch (error) {
-      console.error(error);
+      console.error("Location resolution error:", error);
       toast.error(
-        "Unable to resolve this location. Check the coordinates and try again.",
+        error instanceof Error
+          ? error.message
+          : "Unable to resolve this location. Check the coordinates and try again.",
       );
       setLocationDetails(null);
     } finally {
@@ -209,6 +337,10 @@ export default function TrackingPage() {
     ? `https://www.openstreetmap.org/?mlat=${locationDetails.latitude}&mlon=${locationDetails.longitude}#map=15/${locationDetails.latitude}/${locationDetails.longitude}`
     : "https://www.openstreetmap.org/";
 
+  const mapBbox = locationDetails
+    ? `${Math.min(locationDetails.longitude, activeRoute?.longitude || locationDetails.longitude) - 0.02},${Math.min(locationDetails.latitude, activeRoute?.latitude || locationDetails.latitude) - 0.02},${Math.max(locationDetails.longitude, activeRoute?.longitude || locationDetails.longitude) + 0.02},${Math.max(locationDetails.latitude, activeRoute?.latitude || locationDetails.latitude) + 0.02}`
+    : null;
+
   return (
     <div className="p-4 md:p-6">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
@@ -259,7 +391,9 @@ export default function TrackingPage() {
                 <>
                   <div className="mb-4">
                     <div>
-                      <p className="text-sm text-[#A1A1AA]">Place</p>
+                      <p className="text-sm text-[#A1A1AA]">
+                        Delivery Person Location
+                      </p>
                       <p className="text-white text-lg font-semibold mt-2">
                         {locationDetails.displayName}
                       </p>
@@ -267,6 +401,38 @@ export default function TrackingPage() {
                         {locationDetails.formattedAddress}
                       </p>
                     </div>
+
+                    {activeRoute && (
+                      <div className="bg-[#0B0B0B] border border-[#27272A] rounded-xl p-3 mt-3">
+                        <p className="text-sm text-[#A1A1AA]">
+                          Customer Delivery Address
+                        </p>
+                        <p className="text-white font-semibold mt-2">
+                          {activeRoute.address ||
+                            "Customer address not available"}
+                        </p>
+                      </div>
+                    )}
+
+                    {activeRoute && routeInfo && (
+                      <div className="bg-[#0B0B0B] border border-[#27272A] rounded-xl p-3 mt-3">
+                        <p className="text-sm text-[#A1A1AA]">Route summary</p>
+                        <div className="grid grid-cols-2 gap-3 mt-3">
+                          <div className="rounded-lg bg-[#111111] p-3">
+                            <p className="text-[#A1A1AA] text-xs">Distance</p>
+                            <p className="text-white font-bold text-lg mt-1">
+                              {routeInfo.distance} km
+                            </p>
+                          </div>
+                          <div className="rounded-lg bg-[#111111] p-3">
+                            <p className="text-[#A1A1AA] text-xs">Est. Time</p>
+                            <p className="text-white font-bold text-lg mt-1">
+                              {routeInfo.duration} min
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-3 text-sm mt-3">
                       <div className="rounded-xl border border-[#27272A] bg-[#111111] p-3">
@@ -286,14 +452,22 @@ export default function TrackingPage() {
                   </div>
 
                   <div className="flex-1 rounded-xl border border-[#27272A] overflow-hidden">
-                    <iframe
-                      width="100%"
-                      height="100%"
-                      frameBorder="0"
-                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${locationDetails.longitude - 0.01},${locationDetails.latitude - 0.01},${locationDetails.longitude + 0.01},${locationDetails.latitude + 0.01}&layer=mapnik&marker=${locationDetails.latitude},${locationDetails.longitude}`}
-                      className="min-h-75"
-                      title="Location Map"
-                    />
+                    {deliveryMapRoute ? (
+                      <DeliveryMap route={deliveryMapRoute} />
+                    ) : (
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        src={
+                          mapBbox
+                            ? `https://www.openstreetmap.org/export/embed.html?bbox=${mapBbox}&layer=mapnik&marker=${locationDetails.latitude},${locationDetails.longitude}`
+                            : `https://www.openstreetmap.org/export/embed.html?bbox=${locationDetails.longitude - 0.01},${locationDetails.latitude - 0.01},${locationDetails.longitude + 0.01}&layer=mapnik&marker=${locationDetails.latitude},${locationDetails.longitude}`
+                        }
+                        className="min-h-75"
+                        title="Route Map"
+                      />
+                    )}
                   </div>
                 </>
               ) : (
@@ -309,41 +483,29 @@ export default function TrackingPage() {
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-[#A1A1AA]">Latitude</label>
-              <input
-                type="text"
-                placeholder="e.g. 13.0827"
-                value={latitude}
-                onChange={(event) => setLatitude(event.target.value)}
-                className="mt-2 bg-[#111111] border border-[#27272A] rounded-2xl p-3 text-white w-full outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-[#A1A1AA]">Longitude</label>
-              <input
-                type="text"
-                placeholder="e.g. 80.2707"
-                value={longitude}
-                onChange={(event) => setLongitude(event.target.value)}
-                className="mt-2 bg-[#111111] border border-[#27272A] rounded-2xl p-3 text-white w-full outline-none"
-              />
+              <label className="text-sm text-[#A1A1AA]">Your Location</label>
+              <div className="mt-2 bg-[#111111] border border-[#27272A] rounded-2xl p-3 text-white">
+                <p className="text-xs text-[#D5D5D5]">
+                  Lat: {latitude || "-- "} | Lon: {longitude || "-- "}
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-3 pt-2">
               <button
-                onClick={() => void handleUpdateLocation()}
+                onClick={handleUseCurrentLocation}
                 disabled={isLoading}
+                className="bg-[#DC2626] hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
               >
-                {isLoading ? "Resolving..." : "Update location"}
+                {isLoading ? "Getting location..." : "Use current location"}
               </button>
 
               <button
-                onClick={handleUseCurrentLocation}
-                disabled={isLoading}
-                className="bg-transparent border border-[#27272A] hover:bg-[#111111]"
+                onClick={() => void handleUpdateLocation()}
+                disabled={isLoading || !latitude || !longitude}
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
               >
-                Use current location
+                Map
               </button>
 
               <button
@@ -352,8 +514,9 @@ export default function TrackingPage() {
                   setLongitude("");
                   setLocationDetails(null);
                   setShowMap(false);
+                  setRouteInfo(null);
                 }}
-                className="bg-transparent border border-[#27272A] hover:bg-[#111111]"
+                className="bg-transparent border border-[#27272A] hover:bg-[#111111] text-white px-4 py-2 rounded-lg"
               >
                 Clear
               </button>
@@ -365,6 +528,12 @@ export default function TrackingPage() {
                 {locationDetails?.formattedAddress || "Awaiting GPS input"}
               </p>
               <p className="text-sm text-[#D5D5D5] mt-3">
+                Order: {activeRoute?.customer || "No active order"}
+              </p>
+              <p className="text-sm text-[#D5D5D5]">
+                Destination: {activeRoute?.address || "No address"}
+              </p>
+              <p className="text-sm text-[#D5D5D5] mt-2">
                 Last resolved:{" "}
                 {locationDetails?.timestamp || "No location resolved yet"}
               </p>
