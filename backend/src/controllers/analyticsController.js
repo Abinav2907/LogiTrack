@@ -1,46 +1,46 @@
-const mongoose = require('mongoose');
-const Order = require('../models/Order');
-const Product = require('../models/Product');
+const mongoose = require("mongoose");
+const Order = require("../models/Order");
+const Product = require("../models/product");
 
 // Aggregated analytics
 exports.getAnalytics = async (req, res, next) => {
   try {
     const ownerId = req.user?.id;
     if (!ownerId) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
+      return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
     const ownerObjectId = new mongoose.Types.ObjectId(ownerId);
 
     const revenueAgg = await Order.aggregate([
-      { $unwind: '$items' },
+      { $unwind: "$items" },
       {
         $lookup: {
-          from: 'products',
-          localField: 'items.product',
-          foreignField: '_id',
-          as: 'product',
+          from: "products",
+          localField: "items.product",
+          foreignField: "_id",
+          as: "product",
         },
       },
-      { $unwind: '$product' },
+      { $unwind: "$product" },
       {
         $match: {
-          'product.ownerId': ownerObjectId,
-          status: { $in: ['processing', 'shipped', 'delivered'] },
+          "product.ownerId": ownerObjectId,
+          status: { $in: ["processing", "shipped", "delivered"] },
         },
       },
       {
         $group: {
-          _id: '$_id',
+          _id: "$_id",
           orderRevenue: {
-            $sum: { $multiply: ['$items.price', '$items.quantity'] },
+            $sum: { $multiply: ["$items.price", "$items.quantity"] },
           },
         },
       },
       {
         $group: {
           _id: null,
-          totalRevenue: { $sum: '$orderRevenue' },
+          totalRevenue: { $sum: "$orderRevenue" },
           totalOrders: { $sum: 1 },
         },
       },
@@ -53,68 +53,68 @@ exports.getAnalytics = async (req, res, next) => {
     const prev30Start = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
     const last30Agg = await Order.aggregate([
-      { $unwind: '$items' },
+      { $unwind: "$items" },
       {
         $lookup: {
-          from: 'products',
-          localField: 'items.product',
-          foreignField: '_id',
-          as: 'product',
+          from: "products",
+          localField: "items.product",
+          foreignField: "_id",
+          as: "product",
         },
       },
-      { $unwind: '$product' },
+      { $unwind: "$product" },
       {
         $match: {
-          'product.ownerId': ownerObjectId,
+          "product.ownerId": ownerObjectId,
           createdAt: { $gte: last30Start },
         },
       },
       {
         $group: {
-          _id: '$_id',
+          _id: "$_id",
           orderRevenue: {
-            $sum: { $multiply: ['$items.price', '$items.quantity'] },
+            $sum: { $multiply: ["$items.price", "$items.quantity"] },
           },
         },
       },
       {
         $group: {
           _id: null,
-          revenue: { $sum: '$orderRevenue' },
+          revenue: { $sum: "$orderRevenue" },
           orders: { $sum: 1 },
         },
       },
     ]);
 
     const prev30Agg = await Order.aggregate([
-      { $unwind: '$items' },
+      { $unwind: "$items" },
       {
         $lookup: {
-          from: 'products',
-          localField: 'items.product',
-          foreignField: '_id',
-          as: 'product',
+          from: "products",
+          localField: "items.product",
+          foreignField: "_id",
+          as: "product",
         },
       },
-      { $unwind: '$product' },
+      { $unwind: "$product" },
       {
         $match: {
-          'product.ownerId': ownerObjectId,
+          "product.ownerId": ownerObjectId,
           createdAt: { $gte: prev30Start, $lt: last30Start },
         },
       },
       {
         $group: {
-          _id: '$_id',
+          _id: "$_id",
           orderRevenue: {
-            $sum: { $multiply: ['$items.price', '$items.quantity'] },
+            $sum: { $multiply: ["$items.price", "$items.quantity"] },
           },
         },
       },
       {
         $group: {
           _id: null,
-          revenue: { $sum: '$orderRevenue' },
+          revenue: { $sum: "$orderRevenue" },
           orders: { $sum: 1 },
         },
       },
@@ -128,7 +128,7 @@ exports.getAnalytics = async (req, res, next) => {
 
     const lowStockCount = await Product.countDocuments({
       ownerId: ownerObjectId,
-      $expr: { $lt: ['$stock', '$minStock'] },
+      $expr: { $lt: ["$stock", "$minStock"] },
     });
 
     res.json({

@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 
 const User = require("../models/User");
 const Order = require("../models/Order");
-const Product = require("../models/Product");
+const Product = require("../models/product");
 const Delivery = require("../models/Delivery");
 const {
   isGmailAddress,
@@ -15,9 +15,18 @@ const {
 } = require("../services/registrationOtpService");
 
 const PASSWORD_RULES = [
-  { test: (p) => p.length >= 8, message: "Password must be at least 8 characters" },
-  { test: (p) => /[A-Z]/.test(p), message: "Password must include an uppercase letter" },
-  { test: (p) => /[a-z]/.test(p), message: "Password must include a lowercase letter" },
+  {
+    test: (p) => p.length >= 8,
+    message: "Password must be at least 8 characters",
+  },
+  {
+    test: (p) => /[A-Z]/.test(p),
+    message: "Password must include an uppercase letter",
+  },
+  {
+    test: (p) => /[a-z]/.test(p),
+    message: "Password must include a lowercase letter",
+  },
   { test: (p) => /\d/.test(p), message: "Password must include a number" },
   {
     test: (p) => /[!@#$%^&*]/.test(p),
@@ -183,9 +192,9 @@ const login = async (req, res) => {
 
     if (user.role !== role) {
       return res.status(400).json({
-      message: "Invalid role selected",
+        message: "Invalid role selected",
       });
-}
+    }
 
     // CHECK PASSWORD
     const isMatch = await bcrypt.compare(password, user.password);
@@ -309,7 +318,9 @@ const deleteAccount = async (req, res) => {
 
     const freshUser = await User.findById(user._id);
     if (!freshUser || freshUser.isActive === false) {
-      return res.status(401).json({ message: "Account has already been deleted" });
+      return res
+        .status(401)
+        .json({ message: "Account has already been deleted" });
     }
 
     const passwordMatches = await bcrypt.compare(

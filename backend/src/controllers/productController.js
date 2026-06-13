@@ -1,4 +1,4 @@
-const Product = require("../models/Product");
+const Product = require("../models/product");
 const InventoryHistory = require("../models/InventoryHistory");
 
 // Create a new product
