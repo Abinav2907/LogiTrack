@@ -160,12 +160,16 @@ async function upsertOtpDocument(email) {
     { new: true, upsert: true, runValidators: true },
   );
 
-  await resend.emails.send({
-    from: "onboarding@resend.dev",
+  console.log("Sending OTP to:", normalizedEmail);
+
+  const result = await resend.emails.send({
+    from: "LogiTrack <logitrack862@gmail.com>",
     to: normalizedEmail,
     subject: "Your LogiTrack verification code",
     html: buildOtpEmailHtml(otp, OTP_EXPIRY_MINUTES),
   });
+
+  console.log("Email result:", result);
 
   return {
     email: normalizedEmail,
