@@ -1,5 +1,5 @@
 "use client";
-
+import { API_BASE_URL } from "@/lib/api";
 import { useState } from "react";
 import { BriefcaseBusiness, Truck, User, ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -29,7 +29,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
