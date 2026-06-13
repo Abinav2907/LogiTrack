@@ -27,24 +27,38 @@ function isGmailAddress(email) {
   return /^[^\s@]+@gmail\.com$/i.test(normalized);
 }
 
-function createTransporter() {
-    console.log("GMAIL_USER =", process.env.GMAIL_USER);
-    console.log("GMAIL_APP_PASSWORD exists =", !!process.env.GMAIL_APP_PASSWORD);
+async function createTransporter() {
+  console.log("GMAIL_USER =", process.env.GMAIL_USER);
+  console.log(
+    "GMAIL_APP_PASSWORD exists =",
+    !!process.env.GMAIL_APP_PASSWORD
+  );
 
-    const user = process.env.GMAIL_USER;
-    const pass = process.env.GMAIL_APP_PASSWORD;
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
 
-    if (!user || !pass) {
-        throw new Error("Gmail SMTP credentials are not configured");
-    }
+  if (!user || !pass) {
+    throw new Error("Gmail SMTP credentials are not configured");
+  }
 
-  return nodemailer.createTransport({
-    service: "gmail",
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
     auth: {
       user,
       pass,
     },
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
   });
+
+  await transporter.verify();
+
+  console.log("SMTP connection successful");
+
+  return transporter;
 }
 
 function generateOtpCode() {
@@ -139,7 +153,7 @@ async function upsertOtpDocument(email) {
     { new: true, upsert: true, runValidators: true },
   );
 
-  const transporter = createTransporter();
+  const transporter = await createTransporter();
   const fromName = process.env.GMAIL_FROM_NAME || "LogiTrack";
 
   await transporter.sendMail({
